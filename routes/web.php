@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('/', function() {
+    return "yadaksadra api.v2";
+});
+
 Route::get('invoice', [InvoiceController::class, 'generatePDF']);
 Route::get('postal/address', [InvoiceController::class, 'pdfForPost']);
 

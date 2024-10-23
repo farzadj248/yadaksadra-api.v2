@@ -67,6 +67,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('/', function() {
+    return "yadaksadra api.v2";
+});
+
 // https://blog.pusher.com/laravel-jwt/
 Route::group(['namespace' => 'auth', 'prefix' => 'auth'], function() {
     Route::post('register', [AuthController::class, 'register']);
