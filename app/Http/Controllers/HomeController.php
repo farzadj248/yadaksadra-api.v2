@@ -19,6 +19,7 @@ use App\Models\Messages;
 use App\Models\Transactions;
 use App\Models\Product;
 use App\Models\ProductsImages;
+use App\Models\SocialNetwork;
 use App\Models\Ticket;
 Use \Carbon\Carbon;
 use App\Models\TicketCategories;
@@ -128,29 +129,27 @@ class HomeController extends Controller
 
     public function webHome(Request $request)
     {
-        $data = Cache::remember('web_home', 5, function () use($request){
-            
-            $role="Normal";
-            
+       
+        $data = Cache::remember('web_home', 5, function () use($request){  
+            $role="Normal";    
             if( $request->header('Authorization')) {
-                $response1 = explode(' ', $request->header('Authorization'));
-                
-                if($response1[1] and $response1[1]!="undefined"){
+                $response1 = explode(' ', $request->header('Authorization'));   
+                if($response1[1] && $response1[1]!="undefined"){
                     $token = trim($response1[1]);
-                    $user = JWTAuth::setToken($token)->toUser();
-                    
+                    $user = JWTAuth::setToken($token)->toUser();    
                     if($user){
                         $role=$user->role;
                     }
                 }
             }
-    
+         
             $mare_sale_products = Product::leftJoin('products_images', function ($query) {
                 $query->on('products_images.product_id', '=', 'products.id')
                     ->whereRaw('products_images.id IN (select MAX(a2.id) from products_images as a2 join products as u2 on u2.id = a2.product_id group by u2.id)');
             })
             ->orderBy("products.number_sales","asc")
             ->take(10);
+          
             
             switch($role){
                 case "Marketer":
@@ -365,6 +364,7 @@ class HomeController extends Controller
                         });
                     break;
             }
+       
             
             $currentDate  = Carbon::now();
     
@@ -374,6 +374,7 @@ class HomeController extends Controller
             })
             ->orderBy("products.updated_at",'asc')
             ->where("products.is_amazing","=",1);
+    
             
             switch($role){
                 case "Marketer":
@@ -578,21 +579,24 @@ class HomeController extends Controller
                     ->get();
                     break;
             }
+            
     
             $collection = new Collection($amazin_products);
             $amazin_products = $collection->filter(function ($value, $key) {
                 return !empty($value);
             });
             
+        
             
             $brands = ProductsBrands::where("parent_id",0)->select("title","image_url")->take(10)->get();
             
             $companies = ProductCarCompany::orderBy("order","asc")
             ->select("id","title","en_title","image_url")
             ->get();
+         
     
             $articles=Article::select('id','slug','title','short_body','comments_number','image_url','created_at')->get();
-            
+          
             return [
                 "sliders"=> $sliders,
                 "brands"=> $brands,
@@ -605,6 +609,7 @@ class HomeController extends Controller
             ];
     
         });
+        
     
         return response()->json([
             'success' => true,
@@ -624,6 +629,8 @@ class HomeController extends Controller
 
         $favorites = Favorites::where("uuid",$request->uuid)
         ->count();
+        $socialNetworks=  SocialNetwork::all();
+    
 
         return response()->json([
             'success' => true,
@@ -634,6 +641,7 @@ class HomeController extends Controller
                 "counters"=> [
                     "cart"=> $cart,
                     "favorite"=> $favorites,
+                    "socialNetwork" =>$socialNetworks,
                 ],
             ]
         ], Response::HTTP_OK);   
