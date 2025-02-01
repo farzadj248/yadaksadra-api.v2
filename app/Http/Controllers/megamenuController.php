@@ -17,6 +17,7 @@ class megamenuController extends Controller
      */
     public function index()
     {
+     
         $megamanu = Megamenu::all();
 
         return response()->json([

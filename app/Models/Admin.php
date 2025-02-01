@@ -10,6 +10,11 @@ class Admin extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
+    /**
+     * Guard for the model
+     *
+     * @var string
+     */
     protected $guard = 'admin';
 
     /**

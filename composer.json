@@ -14,10 +14,10 @@
         "league/flysystem": "1.1",
         "maatwebsite/excel": "^3.1",
         "niklasravnsborg/laravel-pdf": "^4.1",
-        "omalizadeh/laravel-multi-payment": "^2.3",
+        "pusher/pusher-php-server": "^7.2",
         "rap2hpoutre/laravel-log-viewer": "^2.2",
         "shetabit/payment": "^4.2",
-        "tymon/jwt-auth": "dev-develop"
+        "tymon/jwt-auth": "^1.0@dev"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

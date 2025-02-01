@@ -24,7 +24,7 @@ class CreateTransactionsTable extends Migration
             $table->string("gateway_pay")->nullable();
             $table->char("type",1);
             $table->integer("amount");
-            $table->tinyInteger("status")->default(1);
+            $table->enum("status",[1,2,3])->default(1);
             $table->timestamps();
         });
     }

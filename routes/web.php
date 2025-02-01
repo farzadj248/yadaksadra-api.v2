@@ -1,7 +1,10 @@
 <?php
 
+use App\Events\RealTimeMessageEvent;
 use App\Http\Controllers\Web\InvoiceController;
 use App\Http\Controllers\CallbackController;
+use App\Models\Notification;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
@@ -37,12 +40,22 @@ Route::post('transaction/verify', [CallbackController::class, 'transaction']);
 
 //Clear Cache facade value:
 Route::get('/clear-cache', function() {
+    Notification::create([
+        'message' => [
+            'order_code' => 324354655,
+            'date' => Carbon::now()->format('Y-m-d H:i:s'),
+            'amount' => 450000,
+            'message' => 'سفارش جدید دریافت شد.'
+        ]
+    ]);
+    event(new RealTimeMessageEvent('hello world'));
     Artisan::call('cache:clear');
     Artisan::call('optimize');
     Artisan::call('route:cache');
     Artisan::call('route:clear');
     Artisan::call('view:clear');
     Artisan::call('config:cache');
+    return 'cleared';
 });
 
 Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);

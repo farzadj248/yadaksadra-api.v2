@@ -182,6 +182,7 @@ return [
 
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
 
+
         Rap2hpoutre\LaravelLogViewer\LaravelLogViewerServiceProvider::class,
 
         Maatwebsite\Excel\ExcelServiceProvider::class,
@@ -242,8 +243,6 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
         'Payment' => Shetabit\Payment\Facade\Payment::class,
-        'JWTAuth' => Tymon\JWTAuth\Facades\JWTAuth::class,
-        'JWTFactory' => Tymon\JWTAuth\Facades\JWTFactory::class,
         'Excel' => Maatwebsite\Excel\Facades\Excel::class,
         'PDF' => niklasravnsborg\LaravelPdf\Facades\Pdf::class
     ],

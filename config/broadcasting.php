@@ -17,6 +17,11 @@ return [
 
     'default' => env('BROADCAST_DRIVER', 'null'),
 
+    'options' => [
+        'cluster' => 'ap2',
+        'useTLS' => true
+    ],
+    
     /*
     |--------------------------------------------------------------------------
     | Broadcast Connections

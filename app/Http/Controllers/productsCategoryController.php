@@ -25,6 +25,7 @@ class productsCategoryController extends Controller
      */
     public function index(Request $request)
     {
+       
         if($request->page){
             $productsCategories=ProductsCategories::where('title', 'like', '%' . $request->q . '%')
             ->where("parent_id",$request->parent)->paginate(10);

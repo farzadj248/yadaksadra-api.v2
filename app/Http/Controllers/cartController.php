@@ -28,8 +28,10 @@ class cartController extends Controller
     {
         $response1 = explode(' ', $request->header('Authorization'));
         $token = trim($response1[1]);
-        $user = JWTAuth::authenticate($token);
-
+    
+        // $user = JWTAuth::authenticate($token);
+        // dd($user);
+    
         $cart = $this->getProductsCart($request->uuid);
         $summery = $this->getInitialsSummery($request->uuid);
 
@@ -301,7 +303,6 @@ class cartController extends Controller
         $response1 = explode(' ', $request->header('Authorization'));
         $token = trim($response1[1]);
         $user = JWTAuth::authenticate($token);
-
         $cart=$this->getProductsCart($request->uuid);
 
         $current_order = Orders::where("status",0)->where("user_id",$user->id)->first();

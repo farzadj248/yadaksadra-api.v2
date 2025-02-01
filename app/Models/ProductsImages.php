@@ -19,8 +19,13 @@ class ProductsImages extends Model
      * @var array
      */
     protected $casts = [
-        // 'url' => "array",
+        'url' => "array",
         'created_at' => "datetime:Y-m-d H:i:s",
         'updated_at' => "datetime:Y-m-d H:i:s",
     ];
+
+    public function scopeSelectUrl($query)
+    {
+        return $query->select('product_id', 'url');
+    }
 }

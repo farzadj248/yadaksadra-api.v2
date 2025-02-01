@@ -10,10 +10,14 @@ use App\Models\ProductCarCompany;
 use App\Models\ProductCarModels;
 use App\Models\ProductDefinedCar;
 use App\Models\ProductCarTypes;
+use App\Models\ProductCarYear;
 use App\Helper\GenerateSlug;
+use App\Models\ProductCarYears;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\Request;
+use App\Models\ProductsProperties;
+use App\Models\ProductsDefaultProperty;
 
 class productCarTypeController extends Controller
 {
@@ -24,38 +28,57 @@ class productCarTypeController extends Controller
      */
     public function index(Request $request)
     {
-        if($request->page){
-            $res=ProductCarTypes::where('company_id',$request->id);
+        if ($request->page) {
+            $res = ProductCarTypes::where('company_id', $request->id);
 
-            if($request->q){
+            if ($request->q) {
                 $res->whereRaw('concat(product_car_types.title,product_car_types.en_title,product_car_types.company_name) like ?', "%{$request->q}%");
             }
-
             $productCarTypes = $res->paginate(10);
-        }else{
-            $productCarTypes=ProductCarTypes::where('company_id',$request->id)->get();
+        } else {
+            $productCarTypes = ProductCarTypes::where('company_id', $request->id)->get();
         }
+        $countries = $productCarTypes->pluck('country')->toArray();
 
         return response()->json([
             'success' => true,
             'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $productCarTypes
+            'data' => $productCarTypes,
+            'countries' => $countries
         ], Response::HTTP_OK);
     }
 
-    public function getCarsWithName(Request $request)
+
+    public function getAllCarCompanies(Request $request)
     {
-        $company=ProductCarCompany::select("id","title","image_url as image")->where("title", $request->title)->first();
+        $carCompanies = ProductCarCompany::paginate(10);
+        $countries = $carCompanies->pluck('country')
+            ->unique()
+            ->filter()
+            ->toArray();
 
-        $cars=[];
-        if($company){
-            $cars=ProductCarTypes::select("id","title", "en_title","image_url")
-            ->where('company_id',$company->id)->get();
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'عملیات با موفقیت انجام شد.',
+            'data' => $carCompanies,
+            'countries' =>  $countries
+        ], Response::HTTP_OK);
+    }
 
-            foreach($cars as $car){
-                $models=ProductCarModels::where("car_id",$car->id)->exists();
-                $car['hasChild']=$models;
+
+    public function getCarTypes(Request $request)
+    {
+
+        $company = ProductCarCompany::select("id", "title", "image_url as image")->where("id", $request->id)->first();
+        $cars = [];
+        if ($company) {
+            $cars = ProductCarTypes::select("id", "title", "en_title", "image_url")
+                ->where('company_id', $company->id)->get();
+            foreach ($cars as $car) {
+                $models = ProductCarModels::where("car_id", $car->id)->exists();
+                $car['hasChild'] = $models;
             }
         }
 
@@ -64,8 +87,92 @@ class productCarTypeController extends Controller
             'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
             'data' => [
-                'company'=> $company,
-                'cars'=> $cars
+                'company' => $company,
+                'cars' => $cars
+            ],
+        ], Response::HTTP_OK);
+    }
+
+    public function getProfessional(Request $request)
+    {
+        // $productsProperties = ProductsProperties::where('value', ['نوع قطعه', 'برند قطعه'])->get();
+        $productsProperties = ProductsDefaultProperty::whereIn('value', ['نوع قطعه', 'برند قطعه' , 'نوع موتور'])->get();
+        // $typeParts = ProductsProperties::where('value', 'نوع قطعه')->get();
+        // // $brandParts = ProductsProperties::where('value', 'برند قطعه')->get();
+        // // $engineTypes = ProductsProperties::where('value', 'نوع موتور')->get();
+        // // $typeParts = ProductsProperties::where('value', 'نوع قطعه')->pluck('child');
+        // // $brandParts = ProductsProperties::where('value', 'برند قطعه')->pluck('child');
+        // // $engineTypes = ProductsProperties::where('value', 'نوع موتور')->pluck('child');
+        $typeParts = ProductsDefaultProperty::where('title', 'نوع قطعه')->pluck('value');
+        $brandParts = ProductsDefaultProperty::where('title', 'برند قطعه')->pluck('value');
+        $engineTypes = ProductsDefaultProperty::where('title', 'نوع موتور')->pluck('value');
+
+      
+
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'عملیات با موفقیت انجام شد.',
+            'data' => [
+                'productsProperties' => $productsProperties,
+                'typeParts' => $typeParts,
+                'brandParts' => $brandParts,
+                'engineTypes' => $engineTypes,
+
+            ],
+        ], Response::HTTP_OK);
+    }
+    public function getCarYears(Request $request)
+    {
+        $carYears = ProductCarYears::where('model_id', $request->id)->get();
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'عملیات با موفقیت انجام شد.',
+            'data' => [
+                'cars years' => $carYears
+            ],
+        ], Response::HTTP_OK);
+    }
+
+
+    public function getCarModels(Request $request)
+    {
+        $models = ProductCarModels::where("car_id", $request->id)->get();
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'عملیات با موفقیت انجام شد.',
+            'data' => [
+                'models' => $models
+            ],
+        ], Response::HTTP_OK);
+    }
+
+
+
+    public function getCarsWithName(Request $request)
+    {
+        $company = ProductCarCompany::select("id", "title", "image_url as image")->where("title", $request->title)->first();
+
+        $cars = [];
+        if ($company) {
+            $cars = ProductCarTypes::select("id", "title", "en_title", "image_url")
+                ->where('company_id', $company->id)->get();
+
+            foreach ($cars as $car) {
+                $models = ProductCarModels::where("car_id", $car->id)->exists();
+                $car['hasChild'] = $models;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'عملیات با موفقیت انجام شد.',
+            'data' => [
+                'company' => $company,
+                'cars' => $cars
             ],
         ], Response::HTTP_OK);
     }
@@ -82,12 +189,12 @@ class productCarTypeController extends Controller
             'id' => 'required|numeric',
             'company' => 'required|string|max:255',
             'title' => 'required|string|max:255',
-            'en_title'=> 'nullable|string',
+            'en_title' => 'nullable|string',
             'order' => 'required|numeric',
             'image_url' => 'nullable|string',
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'statusCode' => 422,
@@ -95,10 +202,10 @@ class productCarTypeController extends Controller
             ], Response::HTTP_OK);
         }
 
-        if($request->image_url){
+        if ($request->image_url) {
             $img = $request->image_url;
-        }else{
-           $img = "https://dl.yadaksadra.com/storage/images/not-icon.svg";
+        } else {
+            $img = "https://dl.yadaksadra.com/storage/images/not-icon.svg";
         }
 
         $productCarType = ProductCarTypes::create([
@@ -106,19 +213,19 @@ class productCarTypeController extends Controller
             'company_name' => $request->company,
             'title' => $request->title,
             'order' => $request->order,
-            'en_title'=> $request->en_title,
+            'en_title' => $request->en_title,
             'image_url' => $img,
         ]);
 
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
+        if ($request->header('agent')) {
+            $admin = Admin::where("id", $request->header('agent'))->first();
 
-            if($admin){
+            if ($admin) {
                 EventLogs::addToLog([
                     'subject' => "افزودن خودروی جدید",
-            	    'body' => $productCarType,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
+                    'body' => $productCarType,
+                    'user_id' => $admin->id,
+                    'user_name' => $admin->first_name . " " . $admin->last_name,
                 ]);
             }
         }
@@ -142,12 +249,12 @@ class productCarTypeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'en_title'=> 'nullable|string',
+            'en_title' => 'nullable|string',
             'order' => 'required|numeric',
             'image_url' => 'nullable|string'
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'statusCode' => 422,
@@ -155,32 +262,32 @@ class productCarTypeController extends Controller
             ], Response::HTTP_OK);
         }
 
-        if($request->image_url){
+        if ($request->image_url) {
             $img = $request->image_url;
-        }else{
-           $img = "https://dl.yadaksadra.com/storage/images/not-icon.svg";
+        } else {
+            $img = "https://dl.yadaksadra.com/storage/images/not-icon.svg";
         }
 
         $productCarType->update([
             'title' => $request->title,
-            'en_title'=> $request->en_title,
+            'en_title' => $request->en_title,
             'order' => $request->order,
             'image_url' => $img,
         ]);
 
-        ProductDefinedCar::where("car_id",$productCarType->id)->update([
-            "car_name"=> $request->title
+        ProductDefinedCar::where("car_id", $productCarType->id)->update([
+            "car_name" => $request->title
         ]);
 
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
+        if ($request->header('agent')) {
+            $admin = Admin::where("id", $request->header('agent'))->first();
 
-            if($admin){
+            if ($admin) {
                 EventLogs::addToLog([
                     'subject' => "ویرایش شرکت خودروسازی",
-            	    'body' => $productCarType,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
+                    'body' => $productCarType,
+                    'user_id' => $admin->id,
+                    'user_name' => $admin->first_name . " " . $admin->last_name,
                 ]);
             }
         }
@@ -199,21 +306,21 @@ class productCarTypeController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Request $request,ProductCarTypes $productCarType)
+    public function destroy(Request $request, ProductCarTypes $productCarType)
     {
         $productCarType->delete();
 
-        ProductDefinedCar::where("car_id",$productCarType->id)->delete();
+        ProductDefinedCar::where("car_id", $productCarType->id)->delete();
 
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
+        if ($request->header('agent')) {
+            $admin = Admin::where("id", $request->header('agent'))->first();
 
-            if($admin){
+            if ($admin) {
                 EventLogs::addToLog([
                     'subject' => "حذف شرکت خودروسازی",
-            	    'body' => $productCarType,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
+                    'body' => $productCarType,
+                    'user_id' => $admin->id,
+                    'user_name' => $admin->first_name . " " . $admin->last_name,
                 ]);
             }
         }

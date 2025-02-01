@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Media;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,44 +17,16 @@ class MediaController extends Controller
      */
     public function index(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'q' => 'required',
-            'pageSize' => 'required'
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
-        }
-
-        switch ($request->q) {
-            case 'all':
-                $q="";
-                break;
-
-            case 'image':
-                $q="image";
-                break;
-
-            case 'video':
-                $q="video";
-                break;
-
-            case 'audio':
-                $q="audio";
-                break;
-
-            default:
-                $q="*";
-                break;
-        }
-
-        $medias=Media::where('media.type', 'like', '%' . $q . '%')
-        ->orderBy("id","desc")
-        ->take($request->pageSize)->get();
+        // if(isset($request->q) && $request->q != 'all'){
+        //     $medias=Media::where('media.type', 'like', '%' . $request->q . '%')
+        //     ->orderBy("id","desc")
+        //     ->select('id','title','size','url','type')
+        //     ->take($request->pageSize)->get();
+        // }else {
+            $medias=Media::orderBy("id","desc")
+            ->select('id','title','size','url','type')
+            ->take($request->pageSize)->get();
+        // }
 
         return response()->json([
             'success' => true,
@@ -123,7 +94,7 @@ class MediaController extends Controller
             'success' => false,
             'statusCode' => 422,
             'message' => 'عملیات با خطا مواجه شد.',
-            'data' => $media
+            'data' => $media ?? null
         ], Response::HTTP_OK);
     }
 

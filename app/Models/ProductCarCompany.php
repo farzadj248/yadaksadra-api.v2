@@ -10,7 +10,7 @@ class ProductCarCompany extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title', 'en_title','order', 'count', 'image_url'
+        'title', 'en_title','order', 'count', 'image_url','country','country_id'
     ];
 
     /**

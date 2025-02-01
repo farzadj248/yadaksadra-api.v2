@@ -16,13 +16,12 @@ class socialNetworkController extends Controller
      */
     public function index(Request $request)
     {
-        if($request->page){
-            $socialNetwork=SocialNetwork::where('fa_title', 'like', '%' . $request->q . '%')
-            ->orWhere('en_title', 'like', '%' . $request->q . '%')
-            ->paginate(10);
-
-        }else{
-            $socialNetwork=SocialNetwork::all();
+        if ($request->page) {
+            $socialNetwork = SocialNetwork::where('fa_title', 'like', '%' . $request->q . '%')
+                ->orWhere('en_title', 'like', '%' . $request->q . '%')
+                ->paginate(10);
+        } else {
+            $socialNetwork = SocialNetwork::all();
         }
 
         return response()->json([
@@ -48,7 +47,7 @@ class socialNetworkController extends Controller
             'link' => 'required|string'
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'statusCode' => 422,
@@ -87,7 +86,7 @@ class socialNetworkController extends Controller
             'link' => 'required|string'
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'statusCode' => 422,

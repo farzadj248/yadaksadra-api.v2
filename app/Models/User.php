@@ -40,7 +40,7 @@ class User extends Authenticatable implements JWTSubject
     0- deactive
     1 - Required documents up to the credit limit 50،000،000
     2 - Required documents up to the credit limit 150،000،000
-    3 - Required documents up to the credit limit 500،000،00
+    3 - Required documents up to the credit limit 500،000،000
     
     request_credit_again 
     0.deactive
@@ -53,7 +53,7 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $fillable = [
-        'personnel_code', 'uuid', 'first_name', 'last_name', 'user_name',
+        'personnel_code', 'uuid', 'first_name', 'full_name','last_name', 'user_name',
         'avatar', 'father_name', 'mobile_number', 'phone_number',
         'national_code', 'birth_date', 'email', 'agency', 'wallet_balance',
         'income', 'shaba_bank', 'biography', 'status',

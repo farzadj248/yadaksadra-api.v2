@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\RealTimeMessageEvent;
 use App\Mail\Mail;
 use App\Models\Cart;
 use App\Helper\Sms;
@@ -11,6 +12,7 @@ use App\Models\Product;
 use App\Models\ShopInfo;
 use App\Models\Transactions;
 use App\Models\Discounts;
+use App\Models\Notification;
 use Illuminate\Support\Carbon;
 use App\Models\UsersAddress;
 use App\Models\ViewersStatistics;
@@ -428,6 +430,14 @@ class PaymentController extends Controller
                     }
                 }
 
+                $this->sendNotification([
+                    'action'=> 'order',
+                    'order_code' => $current_order->order_code,
+                    'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'amount' => number_format($current_order->total).' تومان',
+                    'message' => 'سفارش جدید.'
+                ]);
+
                 return response()->json([
                     'success' => true,
                     'statusCode' => 201,
@@ -532,6 +542,14 @@ class PaymentController extends Controller
                             Sms::sendWithPatern($shopInfo->support_mobile_number,"2zzmn18qxlu8lit",$input_data2);
                         }
                     }
+
+                    $this->sendNotification([
+                        'action'=> 'order',
+                        'order_code' => $current_order->order_code,
+                        'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                        'amount' => number_format($current_order->total) . ' تومان',
+                        'message' => 'سفارش جدید.'
+                    ]);
 
                     return response()->json([
                         'success' => true,
@@ -882,7 +900,7 @@ class PaymentController extends Controller
         }
     }
 
-    public function sendInvoiceToEmail(){
+    public function sendInvoiceToEmail(Request $request){
         $details = [
             'view'=> 'mail.invoice',
             'subject' => $request->subject,
@@ -896,6 +914,12 @@ class PaymentController extends Controller
             'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.'
         ], Response::HTTP_OK);
+    }
+
+    public function sendNotification($message)
+    {
+        Notification::create(['message' => $message]);
+        event(new RealTimeMessageEvent($message));
     }
 
 }

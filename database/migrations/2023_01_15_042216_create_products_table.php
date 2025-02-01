@@ -77,6 +77,10 @@ class CreateProductsTable extends Migration
             $table->tinyInteger('preparationTime')->nullable();
             $table->tinyInteger('amazing_off')->nullable();
             $table->string('amazing_expire')->nullable();
+            $table->string('meta_tag_title')->nullable();
+            $table->string('meta_tag_keys')->nullable();
+            $table->string('meta_tag_canonical')->nullable();
+            $table->string('meta_tag_description')->nullable();
             $table->char('status',1)->default(0);
             $table->timestamps();
         });

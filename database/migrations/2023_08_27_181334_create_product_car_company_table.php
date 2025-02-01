@@ -20,6 +20,8 @@ class CreateProductCarCompanyTable extends Migration
             $table->integer('order')->default(1);
             $table->integer('count')->default(0);
             $table->string('image_url')->nullable();
+            $table->integer('country_id');
+            $table->string('country');
             $table->timestamps();
         });
     }

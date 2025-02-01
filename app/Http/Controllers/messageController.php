@@ -107,9 +107,8 @@ class messageController extends Controller
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
         $user = User::where("mobile_number",$request->mobile_number)->first();
@@ -124,10 +123,9 @@ class messageController extends Controller
                 "user_id"=> $user->id,
                 "type"=> 2
             ]);
-
+            
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
                 'message' => 'پیام با موفقیت ارسال شد.',
                 'sms_res'=> $sms_res
             ], Response::HTTP_OK);

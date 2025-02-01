@@ -8,11 +8,10 @@ use App\Models\Orders;
 use App\Models\Transactions;
 use App\Models\Product;
 use App\Helper\Sms;
+use App\Http\Resources\OrderResource;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 
 class ordersController extends Controller
@@ -33,15 +32,9 @@ class ordersController extends Controller
         if($request->q){
             $orders1->whereRaw('concat(orders.order_code,users.first_name) like ?', "%{$request->q}%");
         }
-
+        
         $orders = $orders1->orderBy("orders.id","desc")->paginate(10);
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $orders
-        ], Response::HTTP_OK);
+        return OrderResource::collection($orders);
     }
 
     public function getOrders(Request $request)
@@ -79,16 +72,10 @@ class ordersController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function show(Orders $order)
-    {
-        $orderItems = Cart::where("order_id",$order->id)->leftJoin('products', function ($query) {
-            $query->on('products.id', '=', 'carts.product_id');
-        })
-        ->leftJoin('products_images', function ($query) {
-            $query->on('products_images.product_id', '=', 'carts.product_id');
-        })
-        ->select('carts.*','products.slug','products.title','products_images.url')
-        ->get();
+    public function show($orderId)
+    {        
+        $order = Orders::with(['items.product.image'])
+        ->findOrFail($orderId);
 
         $transactions = Transactions::where("order_id",$order->id)->first();
 
@@ -118,7 +105,6 @@ class ordersController extends Controller
             'data' => [
                 'order' => $order,
                 'user' => $user,
-                'orderItems'=> $orderItems,
                 'transactions'=> $transactions
             ]
         ], Response::HTTP_OK);
@@ -183,15 +169,14 @@ class ordersController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id' => 'required|numeric',
-            'status' => 'required|numeric|max:7',
+            'status' => 'required|numeric|in:1,2,3,4,5,6',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
         $order = Orders::where("order_code",$request->id)->first();
@@ -273,7 +258,8 @@ class ordersController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id' => 'required|numeric',
-            'postal_receipt' => 'nullable|String',
+            'file' => 'nullable|String',
+            'postTrackingCode'=> 'nullable|string'
         ]);
 
         if($validator->fails()){
@@ -286,7 +272,10 @@ class ordersController extends Controller
 
         $order = Orders::where("order_code",$request->id)->first();
         $order->update([
-            "postal_receipt" => $request->postal_receipt
+            "postal_receipt" => [
+                'file' => $request->file,
+                'tracking_number' => $request->postTrackingCode
+            ]
         ]);
 
         return response()->json([
@@ -443,20 +432,19 @@ class ordersController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id' => 'required|numeric',
-            'Official_file' => 'required|String',
+            'file' => 'required|String',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
         $order = Orders::where("order_code",$request->id)->first();
         $order->update([
-            "Official_file" => $request->Official_file,
+            "Official_file" => $request->file,
             "isOfficial" => 2
         ]);
 
@@ -479,9 +467,9 @@ class ordersController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function updateOrderProducts(Request $request)
+    public function updateOrderProducts($id)
     {
-        $order=Orders::where("order_code",$request->id)->first();
+        $order=Orders::findOrFail($id);
         if(!$order){
             return response()->json([
                 'success' => false,
@@ -493,150 +481,241 @@ class ordersController extends Controller
 
         $user=User::where("id",$order->user_id)->select("role","uuid")->first();
 
-        if(!$request->product){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 401,
-                'message' => "اطلاعات ارسالی نامعتبر است!",
-                'data'=> $order
-            ], Response::HTTP_OK);
-        }
-
         $finalAmount=0;
         $discount=0;
 
-        foreach($request->product as $item){
-            $res=json_decode($item,true);
+        $id = request()->id ?? '';
+        $grade = request()->grade ?? 'Main';
+        $quantity = request()->quantity ?? 1;
 
-            $product=Product::select('products.id',
-                'products.main_price','products.main_off','products.main_inventory',
-                'products.custom_price','products.custom_off','custom_inventory',
-                'products.market_price','products.market_off','products.market_inventory',
-                'products.main_price_2','products.main_off_2','products.main_inventory_2',
-                'products.custom_price_2','products.custom_off_2','custom_inventory_2',
-                'products.market_price_2','products.market_off_2','products.market_inventory_2',
-                'products.main_price_3','products.main_off_3','products.main_inventory_3',
-                'products.custom_price_3','products.custom_off_3','custom_inventory_3',
-                'products.market_price_3','products.market_off_3','products.market_inventory_3',
-                'products.main_minimum_purchase', 'products.main_minimum_purchase_2', 'products.main_minimum_purchase_3',
-                'products.market_minimum_purchase', 'products.market_minimum_purchase_2', 'products.market_minimum_purchase_3',
-                'products.custom_minimum_purchase', 'products.custom_minimum_purchase_2', 'products.custom_minimum_purchase_3',
-                'products.number_sales')
-                ->where("id",$res["id"])
-                ->first();
+        $product = Product::findOrFail($id);
+        if(!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => "محصول با این شناسه یافت نشد.",
+            ], 422);
+        }
 
             $price="";
             $off="";
 
             switch($user->role){
                 case "Marketer":
-
-                    switch($res["grade"])
+                    switch($grade)
                     {
                         case "Main":
                             $price=$product->main_price_2;
                             $off=$product->main_off_2;
+
+                            if ($product->main_price_2 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->main_inventory_2 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی ". $product->main_inventory_2 ." عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Custom":
                             $price=$product->custom_price_2;
                             $off=$product->custom_off_2;
+
+                            if ($product->custom_price_2 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->custom_inventory_2 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->custom_inventory_2 . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Marketer":
                             $price=$product->market_price_2;
                             $off=$product->market_off_2;
+
+                            if ($product->market_price_2 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->market_inventory_2 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->market_inventory_2 . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
                     }
-
-                    // $item['main_inventory']=$item->main_inventory_2;
-                    // $item['market_inventory']=$item->market_inventory_2;
-                    // $item['custom_inventory']=$item->custom_inventory_2;
-
                 break;
 
                 case "Saler":
-                    switch($res["grade"])
+                    switch($grade)
                     {
                         case "Main":
                             $price=$product->main_price_3;
                             $off=$product->main_off_3;
+
+                            if ($product->main_price_3 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->main_inventory_3 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->main_inventory_3 . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Custom":
                             $price=$product->custom_price_3;
                             $off=$product->custom_off_3;
+
+                            if ($product->custom_price_3 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->custom_inventory_3 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->custom_inventory_3 . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Marketer":
                             $price=$product->market_price_3;
                             $off=$product->market_off_3;
+
+                            if ($product->market_price_3 > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+                            
+                            if ($product->market_inventory_3 < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->market_inventory_3 . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
                     }
-
-                        // $item['main_inventory']=$item->main_inventory_3;
-                        // $item['market_inventory']=$item->market_inventory_3;
-                        // $item['custom_inventory']=$item->custom_inventory_3;
-
                     break;
 
                 default :
-                    switch($res["grade"])
+                    switch($grade)
                     {
                         case "Main":
                             $price=$product->main_price;
                             $off=$product->main_off;
+
+                            if ($product->main_price > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->main_inventory < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->main_inventory . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Custom":
                             $price=$product->custom_price;
                             $off=$product->custom_off;
+
+                            if ($product->custom_price > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+                            
+                            if ($product->custom_inventory < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->custom_inventory . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
 
                         case "Marketer":
                             $price=$product->market_price;
                             $off=$product->market_off;
+
+                            if ($product->market_price > 0) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "برای محصول انتخابی قیمت ثبت نشده است.",
+                                ], 422);
+                            }
+
+                            if ($product->market_inventory < $quantity) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "موجودی محصول انتخابی " . $product->market_inventory . " عدد می باشد.",
+                                ], 422);
+                            }
                             break;
                     }
-
-
-                    // $item['main_inventory']=$item->main_inventory;
-                    // $item['market_inventory']=$item->market_inventory;
-                    // $item['custom_inventory']=$item->custom_inventory;
-
                 break;
             }
 
-            $finalAmount=$finalAmount+$res["quantity"]*($price*((100-(int)$off)/100));
-            $discount=$discount+$res["quantity"]*($price*($off/100));
+            $finalAmount=$finalAmount+$quantity*($price*((100-(int)$off)/100));
+            $discount=$discount+$quantity*($price*($off/100));
 
             $cart=Cart::where("order_id",$order->id)
-            ->where("product_id",$res["id"])
+            ->where("product_id",$id)
             ->first();
 
             if($price!=0){
                 if($cart){
                     $cart->update([
-                        "quantity"=> $res["quantity"],
+                        "quantity"=> $quantity,
                         "saved_price"=> $price,
                         "saved_off"=> $off,
-                        "grade"=> $res["grade"],
+                        "grade"=> $grade,
                     ]);
                 }else{
                     Cart::create([
                         "uuid"=> $user->uuid,
-                        "product_id"=> $res["id"] ,
+                        "product_id"=> $id ,
                         "order_id"=> $order->id,
-                        "quantity"=> $res["quantity"],
+                        "quantity"=> $quantity,
                         "saved_price"=> $price,
                         "saved_off"=> $off,
-                        "grade"=> $res["grade"],
+                        "grade"=> $grade,
                         "user_role"=> $user->role,
                         "status"=> 1
                     ]);
                 }
             }
-        }
 
         $summery=$this->orderSummery($order);
 
@@ -644,10 +723,6 @@ class ordersController extends Controller
             "total" => $summery['total'],
             "discount" => $summery['discount']
         ]);
-
-        $transaction=Transactions::where("order_id",$order->id)
-        ->where("status",1)
-        ->first();
 
         $this->updateTransaction($order,$summery['total']);
 
@@ -660,25 +735,29 @@ class ordersController extends Controller
 
     public function removeProductFromOrder(Request $request)
     {
-        $order=Orders::where("order_code",$request->id)->first();
-        if(!$order){
+        $validator = Validator::make($request->all(), [
+            'orderId' => 'required|numeric|exists:orders,id',
+            'cartId' => 'required|numeric|exists:carts,id',
+        ]);
+
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'statusCode' => 401,
-                'message' => "اطلاعات ارسالی نامعتبر است!",
-            ], Response::HTTP_OK);
+                'message' => $validator->errors()
+            ], 422);
         }
 
-        $cart=Cart::where("order_id",$order->id)
-            ->where("id",$request->cId)
-            ->first();
+        $order = Orders::findOrFail($request->orderId);
 
+        $cart=Cart::findOrFail($request->cartId);
         if(!$cart){
             return response()->json([
                 'success' => false,
                 'statusCode' => 401,
-                'message' => "اطلاعات ارسالی نامعتبر است!",
-            ], Response::HTTP_OK);
+                'message' => [
+                    'cart' => 'محصول یافت نشد'
+                ],
+            ], 422);
         }
 
         $cart->delete();
@@ -699,56 +778,50 @@ class ordersController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function cancellOrderByAdmin(Request $request)
+    public function cancellOrderByAdmin(Request $request,$orderCode)
     {
         $validator = Validator::make($request->all(), [
-            'code' => 'required|numeric',
-            'nopay'=> 'nullable|numeric'
+            'nopay'=> 'nullable|numeric',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
-        $order=Orders::where("order_code",$request->id)->first();
+        $order=Orders::where("order_code", $orderCode)->first();
         if(!$order){
             return response()->json([
                 'success' => false,
-                'statusCode' => 401,
                 'message' => "اطلاعات ارسالی نامعتبر است!",
-                'data'=> $order
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
         $order->update([
-            "status"=> $request->code
+            "status"=> 6
         ]);
 
-        if($request->code==6){
-            if($request->nopay&&$request->nopay==1){
-                //بدون بازگشت وجه
-            }else{
-                $user=User::where("id",$order->user_id)->first();
-                $user_name=$user->first_name." ".$user->last_name;
+        // if($request->nopay&&$request->nopay==1){
+            //بدون بازگشت وجه
+        // }else{
+            $user=User::where("id",$order->user_id)->first();
+            $user_name=$user->first_name." ".$user->last_name;
 
-                $user->update([
-                    "wallet_balance"=> $user->wallet_balance+$order->total
-                ]);
+            $user->update([
+                "wallet_balance"=> $user->wallet_balance+$order->total
+            ]);
 
-                $number=$user->mobile_number;
-                $message = "مشتری گرامی:".$user_name."
-                سفارش شما
-                به شماره: ".$order->order_code."
-                لغو شد.
-                مبلغ پرداختی در کیف پول شما شارژ شد.";
+            $number="09361544927";
+            $message = "مشتری گرامی:".$user_name."
+            سفارش شما
+            به شماره: ".$order->order_code."
+            لغو شد.
+            مبلغ پرداختی در کیف پول شما شارژ شد.";
 
-                // Sms::send($number,$message);
-            }
-        }
+            Sms::send($number,$message);
+        // }
 
         return response()->json([
             'success' => true,
@@ -798,7 +871,7 @@ class ordersController extends Controller
                 "amount"=> $amount
             ]);
         }else{
-            $transactions = Transactions::create([
+            Transactions::create([
                 "user_id"=>$order->user_id,
                 "order_id"=>$order->id,
                 "description"=> "اصلاحیه سفارش شماره ".$order->order_code,
@@ -808,27 +881,27 @@ class ordersController extends Controller
         }
     }
 
-    public function verifyOrder(Request $request)
+    public function verifyOrder($orderCode)
     {
-        $validator = Validator::make($request->all(), [
-            'mobile' => 'required|required',
-            'order_id'=> 'required|string'
-        ]);
-
-        if($validator->fails()){
+        $order = Orders::where("order_code", $orderCode)->first();
+        if (!$order) {
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
-                'message' => "اطلاعات ارسالی نامعتبر است."
-            ], Response::HTTP_OK);
+                'message' => [
+                    'order' => ["سفارشی  با این شناسه یافت نشد."]
+                ],
+            ], 422);
         }
 
+        $order->update([
+            "status" => 2
+        ]);
+        
         $body="مشتری گرامی
 سفارش شما تأیید شد.
-شماره پیگیری : ".$request->order_id;
+شماره پیگیری : ". $order->order_code;
 
-
-        Sms::send($request->mobile,$body);
+        Sms::send($order->user->mobile,$body);
 
         return response()->json([
             'success' => true,

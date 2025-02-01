@@ -38,8 +38,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'mobile_number' => 'required|numeric',
             'password' => 'sometimes|required|min:6',
-            'FirstName' => 'sometimes|required|string|max:255',
-            'LastName' => 'sometimes|required|string|max:255',
+            'FullName' => 'sometimes|required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -52,20 +51,24 @@ class AuthController extends Controller
 
         $mobile_number = $request->mobile_number;
         $password = $request->password;
-        $firstName = $request->FirstName;
-        $lastName = $request->LastName;
+        $FullName = $request->FullName;
 
         $user = User::where('mobile_number', $mobile_number)->first();
 
         // Case 1: Mobile number and password provided
         if ($mobile_number && $password) {
-            if ($user) {
+            if ($user && !$FullName) {
                 // Send OTP for login if user exists
                 $otp = $this->sendOtp($mobile_number);
                 return $this->responseWithOtp('OTP sent for login.', $otp, false);
             }
             // New user registration if FirstName and LastName are provided
-            if ($firstName && $lastName) {
+
+            if($user && $FullName ){
+                return $this->invalidRequestResponse('کاربر فبلا ثبت شده است');
+            }
+
+            if ($FullName && !$user) {
                 $otp = $this->sendOtp($mobile_number);
                 return $this->responseWithOtp('OTP sent for registration.', $otp, true);
             }
@@ -379,9 +382,10 @@ class AuthController extends Controller
     public function register(Request $request)
     {
 
+      
+
         $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'FullName' => 'required|string|max:255',
             'password' => 'required',
             'mobile_number' => 'required|string|max:11|unique:users',
             'uuid' => 'required|string'
@@ -437,8 +441,7 @@ class AuthController extends Controller
 
         $user = User::create([
             'personnel_code' => $personnel_code,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
+            'full_name' => $request->FullName,
             'mobile_number' => $request->mobile_number,
             'password' => Hash::make($request->password),
             'uuid' => $uuid,
@@ -453,11 +456,8 @@ class AuthController extends Controller
 
 
         UsersOtp::where("mobile_number", $user->mobile_number)->delete();
-
         $exp = Carbon::now()->addDays(7)->timestamp;
-        // dd('23r33332');
         $token = JWTAuth::customClaims(['exp' => $exp])->fromUser($user);
-
         return response()->json([
             'success' => true,
             'statusCode' => 201,
@@ -467,8 +467,7 @@ class AuthController extends Controller
                     "id" => $user->id,
                     "personnel_code" =>  $user->personnel_code,
                     "uuid" =>  $user->uuid,
-                    "first_name" =>  $user->first_name,
-                    "last_name" =>  $user->last_name,
+                    "full_name" => $user->full_name,
                     "avatar" => $user->avatar,
                     "role" => $user->role,
                     "upgrade" => 1
@@ -487,10 +486,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
 
-      
+
         $credentials = $request->only('mobile_number', 'password');
 
-        $exp = Carbon::now()->addDays(7)->timestamp;
+        // $exp = Carbon::now()->addDays(7)->timestamp;
+        $exp = Carbon::now()->addSeconds(30);
 
         try {
             if (! $token = JWTAuth::attempt($credentials, ['exp' => $exp])) {
@@ -615,6 +615,7 @@ class AuthController extends Controller
 
     public function validateActivationCode(Request $request)
     {
+      
         $validator = Validator::make($request->all(), [
             'mobile_number' => 'required|size:11',
             'otp' => 'sometimes|max:5',
@@ -644,8 +645,10 @@ class AuthController extends Controller
         //         ],
         //     ], Response::HTTP_OK);
         // }
+        // return $request->all();
+        // dd($request->all());
 
-        if ($request->isNew === "true") {
+        if ($request->isNew == true) {
             if ($UsersOtp->otp == $request->otp) {
                 $diff = $this->getDifference($UsersOtp->expire_date);
                 if ($diff['isValid'] == true) {
@@ -674,8 +677,8 @@ class AuthController extends Controller
                 ], Response::HTTP_OK);
             }
         } else {
-        
-          
+
+
             $user = User::where("mobile_number", $request->mobile_number);
             if (!$user->exists()) {
                 return response()->json([
@@ -691,7 +694,7 @@ class AuthController extends Controller
                 $diff = $this->getDifference($UsersOtp->expire_date);
                 if ($diff['isValid'] == true) {
                     if ($request->status == 2) {
-             
+
                         // return response()->json([
                         //     'success' => true,
                         //     'statusCode' => 201,
@@ -841,7 +844,7 @@ class AuthController extends Controller
 
     function generateOtp()
     {
-        return rand(11111, 99999);
+        return rand(1111, 9999);
     }
 
     public function getDifference($exp)
@@ -1215,7 +1218,6 @@ class AuthController extends Controller
     {
         $users = User::select(
             'id',
-            'personnel_code',
             'avatar',
             'first_name',
             'last_name',

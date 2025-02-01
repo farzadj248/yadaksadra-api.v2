@@ -84,10 +84,23 @@ class Orders extends Model
     protected $casts = [
         'created_at' => "datetime:Y-m-d H:i:s",
         'updated_at' => "datetime:Y-m-d H:i:s",
+        'address' => 'array',
+        'isOfficial' => 'boolean',
+        'postal_receipt'=> 'array'
     ];
     
     public function getRouteKeyName()
     {
         return 'order_code';
+    }
+
+    public function items()
+    {
+        return $this->hasMany(Cart::class,'order_id');
+    }
+    
+    public function user()
+    {
+        return $this->hasOne(User::class,'id','user_id');
     }
 }

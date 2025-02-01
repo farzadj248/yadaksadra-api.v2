@@ -13,31 +13,30 @@
     use Illuminate\Support\Facades\Hash;
     use Illuminate\Support\Facades\Validator;
     use Config;
-    use Illuminate\Support\Str;
     use Tymon\JWTAuth\Exceptions\JWTException;
     use Tymon\JWTAuth\Facades\JWTAuth;
     use Symfony\Component\HttpFoundation\Response;
 
     class adminController extends Controller
     {
-        function __construct()
-        {
-            Config::set('jwt.user', Admin::class);
-            Config::set('auth.providers', ['users' => ['driver' => 'eloquent','model' => Admin::class,]]);
-        }
-
-        public function authenticate(Request $request)
+        // function __construct()
+        // {
+        //     Config::set('jwt.user', Admin::class);
+        //     Config::set('auth.providers', ['users' => ['driver' => 'eloquent','model' => Admin::class,]]);
+        // }
+    
+        public function login(Request $request)
         {
             $credentials = $request->only('user_name', 'password');
 
             $exp = Carbon::now()->addDays(7)->timestamp;
 
             try {
-                if (! $token = JWTAuth::attempt($credentials, ['exp' => $exp])) {
-                    return response()->json(['error' => 'invalid_credentials'], 400);
+                if (! $token = auth()->guard('admin')->attempt($credentials, ['exp' => $exp])) {
+                    return response()->json(['message' => 'نام کاربری یا کلمه عبور نامعتبر است.'], 400);
                 }
             } catch (JWTException $e) {
-                return response()->json(['error' => 'could_not_create_token'], 500);
+                return response()->json(['message' => 'خطا سرور!'], 500);
             }
 
             $admin=Admin::select('id','personnel_code','user_name','first_name','last_name','avatar','email','avatar','status','roles')
@@ -45,10 +44,8 @@
 
             if($admin->status==0){
                 return response()->json([
-                    'success' => false,
-                    'statusCode' => 422,
-                    'message' => 'حساب کاربری غیرفعال است.',
-                ], Response::HTTP_OK);
+                    'message' => 'حساب کاربری شما غیرفعال است.',
+                ], 401);
             }
 
             $claims=$this->explodeRoles($admin->roles);
@@ -62,20 +59,13 @@
 
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
                 'message' => 'عملیات با موفقیت انجام شد.',
                 "data" => [
                     "admin" =>[
                         "information" => $admin,
                         "claims" => $claims
                     ],
-                    "tokens"=> [
-                        "access_token"=> [
-                            "value"=> $token,
-                            "token_type"=> "Bearer",
-                            "expires_in"=> $exp
-                        ],
-                    ],
+                    "token"=> $token
                 ]
             ], Response::HTTP_OK);
         }
@@ -140,7 +130,6 @@
                 "data" => [
                     "admin" =>[
                         "information" => [
-                            "id"=> $admin->id,
                             "personnel_code" => $admin->personnel_code,
                             "first_name" => $admin->first_name,
                             "last_name" => $admin->last_name,
@@ -478,20 +467,18 @@
             ]);
 
             if ($validator->fails()) {
-                return response()->json(['error' => $validator->messages()], 200);
+                return response()->json(['message' => "توکن الزامی است."], 422);
             }
 
             try {
                 JWTAuth::invalidate($request->token);
-
                 return response()->json([
-                    'success' => true,
-                    'message' => 'User has been logged out'
-                ]);
+                    'success'=> true,
+                    'message' => 'عملیات با موفقیت انجام شد.'
+                ],200);
             } catch (JWTException $exception) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Sorry, user cannot be logged out'
+                    'message' => 'خطا!'
                 ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
         }

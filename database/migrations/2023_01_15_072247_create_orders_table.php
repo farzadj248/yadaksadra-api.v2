@@ -31,7 +31,7 @@ class CreateOrdersTable extends Migration
             $table->tinyInteger('sending_method')->default(1);
             $table->integer('sending_amount')->nullable();
             $table->string('postal_receipt')->nullable();
-            $table->tinyInteger('gateway_pay')->default(1);
+            $table->enum('gateway_pay',['1', '2', '3', '4', '5', '6'])->default(1);
             $table->char('isOfficial',1)->default(0);
             $table->integer('marketer_id')->nullable();
             $table->integer('marketer_commission')->nullable();

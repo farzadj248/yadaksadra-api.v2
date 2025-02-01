@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\RealTimeMessageEvent;
 use App\Models\FastPayment;
 use App\Mail\Mail;
 use App\Models\Cart;
@@ -12,6 +13,7 @@ use App\Models\Product;
 use App\Models\ShopInfo;
 use App\Models\Transactions;
 use App\Models\Discounts;
+use App\Models\Notification;
 use Illuminate\Support\Carbon;
 use App\Models\UsersAddress;
 use App\Models\ViewersStatistics;
@@ -124,6 +126,14 @@ class CallbackController extends Controller
                         Sms::sendWithPatern($shopInfo->support_mobile_number,"2zzmn18qxlu8lit",$input_data2);
                     }
                 }
+
+                $this->sendNotification([
+                    'action' => 'order',
+                    'order_code' => $order->order_code,
+                    'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'amount' => number_format($order->total).' تومان',
+                    'message' => 'سفارش جدید.'
+                ]);
 
                 $this->CommissionCalculation($order,(int)$order->total,$user);
 
@@ -292,6 +302,14 @@ class CallbackController extends Controller
                     }
                 }
 
+                $this->sendNotification([
+                    'action' => 'fastPayment',
+                    'transaction_id' => $transaction_id,
+                    'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'amount' => number_format($amoun) . ' تومان',
+                    'message' => 'پرداخت سریع.'
+                ]);
+
                 return view("pages/callback/index",compact("res"));
 
             } catch (InvalidPaymentException $exception) {
@@ -375,6 +393,14 @@ class CallbackController extends Controller
                         Sms::sendWithPatern($shopInfo->support_mobile_number,"g7p36blu8yb0m7a",$input_data2);
                     }
                 }
+
+                $this->sendNotification([
+                    'action' => 'wallet',
+                    'transaction_id' => $order_id,
+                    'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'amount' => number_format($amoun) . ' تومان',
+                    'message' => 'شارژ کیف پول'
+                ]);
 
                 return view("pages/callback/index",compact("res"));
 
@@ -551,4 +577,9 @@ class CallbackController extends Controller
         }
     }
 
+    public function sendNotification($message)
+    {
+        Notification::create(['message' => $message]);
+        event(new RealTimeMessageEvent($message));
+    }
 }
