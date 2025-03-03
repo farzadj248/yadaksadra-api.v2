@@ -7,6 +7,7 @@ use App\Helper\EventLogs;
 use App\Models\Admin;
 use App\Models\Product;
 use App\Helper\GenerateSlug;
+use App\Http\Resources\CategoryResources;
 use App\Models\ProductCarCompany;
 use App\Models\ProductsCategories;
 use App\Models\ProductsBrands;
@@ -27,19 +28,20 @@ class productsCategoryController extends Controller
     {
        
         if($request->page){
-            $productsCategories=ProductsCategories::where('title', 'like', '%' . $request->q . '%')
+            $data=ProductsCategories::where('title', 'like', '%' . $request->q . '%')
             ->where("parent_id",$request->parent)->paginate(10);
-
+            return CategoryResources::collection($data);
         }else{
-            $productsCategories=ProductsCategories::where("parent_id",$request->parent)->get();
-        }
+            $data=ProductsCategories::where("parent_id",$request->parent)->get();
 
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $productsCategories
-        ], Response::HTTP_OK);
+            return response()->json([
+                'success' => true,
+                'statusCode' => 201,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $data
+            ], Response::HTTP_OK);
+        }
+        
     }
 
     public function getCategories(Request $request)

@@ -9,7 +9,11 @@ class NotificationController extends Controller
 {
     public function index()
     {
-        $data = Notification::where('seen',false)->get();
+        $data = Notification::where('seen', false)
+        ->orderBy('id', 'desc')
+        ->get()
+        ->groupBy('action');
+        
         return response()->json([
             'success'=> true,
             'data'=> $data

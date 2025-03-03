@@ -127,12 +127,12 @@ class CallbackController extends Controller
                     }
                 }
 
-                $this->sendNotification([
+                $this->sendNotification('event',[
                     'action' => 'order',
                     'order_code' => $order->order_code,
                     'date' => Carbon::now()->format('Y-m-d H:i:s'),
                     'amount' => number_format($order->total).' تومان',
-                    'message' => 'سفارش جدید.'
+                    'message' => 'سفارش جدید دریافت شد.'
                 ]);
 
                 $this->CommissionCalculation($order,(int)$order->total,$user);
@@ -302,12 +302,12 @@ class CallbackController extends Controller
                     }
                 }
 
-                $this->sendNotification([
+                $this->sendNotification('event',[
                     'action' => 'fastPayment',
                     'transaction_id' => $transaction_id,
                     'date' => Carbon::now()->format('Y-m-d H:i:s'),
                     'amount' => number_format($amoun) . ' تومان',
-                    'message' => 'پرداخت سریع.'
+                    'message' => 'یک پرداخت موفق|پرداخت سریع.'
                 ]);
 
                 return view("pages/callback/index",compact("res"));
@@ -394,12 +394,12 @@ class CallbackController extends Controller
                     }
                 }
 
-                $this->sendNotification([
+                $this->sendNotification('event',[
                     'action' => 'wallet',
                     'transaction_id' => $order_id,
                     'date' => Carbon::now()->format('Y-m-d H:i:s'),
                     'amount' => number_format($amoun) . ' تومان',
-                    'message' => 'شارژ کیف پول'
+                    'message' => 'یک پرداخت موفق|شارژ کیف پول'
                 ]);
 
                 return view("pages/callback/index",compact("res"));
@@ -577,9 +577,9 @@ class CallbackController extends Controller
         }
     }
 
-    public function sendNotification($message)
+    public function sendNotification($action,$message)
     {
-        Notification::create(['message' => $message]);
-        event(new RealTimeMessageEvent($message));
+        $notification = Notification::create(['action' => $action, 'message' => $message]);
+        event(new RealTimeMessageEvent('event', $notification));
     }
 }

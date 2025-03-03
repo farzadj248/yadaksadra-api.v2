@@ -5,7 +5,8 @@
     use App\Helper\EventLogs;
     use Illuminate\Support\Facades\Date;
     use App\Helper\Sms;
-    use App\Models\Admin;
+use App\Http\Resources\CommonResources;
+use App\Models\Admin;
     use App\Models\UsersOtp;
     use Carbon\Carbon;
     use App\Models\AdminRoles;
@@ -19,12 +20,6 @@
 
     class adminController extends Controller
     {
-        // function __construct()
-        // {
-        //     Config::set('jwt.user', Admin::class);
-        //     Config::set('auth.providers', ['users' => ['driver' => 'eloquent','model' => Admin::class,]]);
-        // }
-    
         public function login(Request $request)
         {
             $credentials = $request->only('user_name', 'password');
@@ -540,16 +535,11 @@
          */
         public function index(Request $request)
         {
-            $admins=Admin::where("id", '!=',1)
+            $data=Admin::where("id", '!=',1)
             ->whereRaw('concat(first_name,personnel_code,last_name) like ?', "%{$request->q}%")
+            ->where('id','!=',auth()->guard('admin')->user()->id)
             ->paginate(10);
-
-            return response()->json([
-                'success' => true,
-                'statusCode' => 201,
-                'message' => 'عملیات با موفقیت انجام شد.',
-                'data' => $admins
-            ], Response::HTTP_OK);
+            return CommonResources::collection($data);
         }
 
         /**
@@ -560,35 +550,28 @@
          */
         public function store(Request $request)
         {
-            $response1 = explode(' ', $request->header('Authorization'));
-            $token = trim($response1[1]);
-            $admin = JWTAuth::authenticate($token);
+            $admin = auth()->guard('admin')->user();
 
             $validator = Validator::make($request->all(), [
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
                 'user_name' => 'required|string|max:255|unique:admins',
-                'email' => 'required|string|max:255|unique:admins',
+                'email' => 'required|email|unique:admins',
                 'mobile_number' => 'required|string|max:11|unique:admins',
                 'password' => 'required|string|min:6|confirmed',
-                'national_code'=> 'required|string|max:10|unique:admins',
-                'roles' => 'required|string',
+                'national_code'=> 'required|string|min:8|unique:admins',
                 'avatar' => 'required|string',
-                'birth_date' => 'required|string',
-                'gender' => 'required|string',
-                'province' => 'required|string',
-                'city' => 'required|string',
-                'address' => 'required|string',
-                'roles' => 'required|string',
+                'birth_date' => 'required||date_format:Y-m-d',
+                'gender' => 'required|in:Male,FeMale',
+                'role_id' => 'required|exists:admin_roles,id',
                 'status' => 'required|string',
             ]);
 
             if($validator->fails()){
                 return response()->json([
                     'success' => false,
-                    'statusCode' => 422,
                     'message' => $validator->errors()
-                ], Response::HTTP_OK);
+                ], 422);
             }
 
             $personel_code = $this->personel_code();
@@ -601,19 +584,16 @@
                 'email' => $request->email,
                 'mobile_number' => $request->mobile_number,
                 'national_code' => $request->national_code,
-                'roles' => $request->roles,
+                'role_id' => $request->role_id,
                 'avatar' => $request->avatar,
                 'birth_date' => $request->birth_date,
                 'gender' => $request->gender,
-                'province' => $request->province,
-                'city' => $request->city,
-                'address' => $request->address,
                 'status' => $request->status,
                 'password' => Hash::make($request->password)
             ]);
 
             EventLogs::addToLog([
-                'subject' => "ایجاد پرسنل جدید",
+                'subject' => "ایجاد پرسنل جدید:". $request->first_name.' '. $request->last_name." توسط ". $admin->first_name.' '. $admin->last_name,
         	    'body' => $new_admin,
         	    'user_id' => $admin->id,
         	    'user_name'=> $admin->first_name." ".$admin->last_name,
@@ -621,9 +601,7 @@
 
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
                 'message' => 'عملیات با موفقیت انجام شد.',
-                'data' => $new_admin
             ], Response::HTTP_OK);
         }
 
@@ -637,27 +615,63 @@
          * @param  int  $id
          * @return \Illuminate\Http\Response
          */
-        public function show(Request $request ,Admin $admin)
+        public function show(Admin $admin)
         {
-            $response1 = explode(' ', $request->header('Authorization'));
-            $token = trim($response1[1]);
-            $user = JWTAuth::authenticate($token);
+            return response()->json([
+                'success' => true,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $admin
+            ], Response::HTTP_OK);
+        }
 
-            // if(Str::contains($user->roles, 'GeneralAdmin')==false){
-            //   if($user->id != $admin->id){
-            //         return response()->json([
-            //             'success' => false,
-            //             'statusCode' => 422,
-            //             'message' => 'دسترسی شما به اطلاعات این کاربر محدود شده است.',
-            //         ], Response::HTTP_OK);
-            //     }
-            // }
+        public function profile()
+        {
+            $admin = auth()->guard()->user();
+            return response()->json([
+                'success' => true,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $admin
+            ], Response::HTTP_OK);
+        }
+
+        public function updateProfile(Request $request)
+        {
+            $admin = auth()->guard('admin')->user();
+
+            $validator = Validator::make($request->all(), [
+                'first_name' => 'required|string|max:255',
+                'last_name' => 'required|string|max:255',
+                'user_name' => 'required|string|max:255|unique:admins,user_name,' . $admin->id,
+                'mobile_number' => 'required|string|max:11|unique:admins,mobile_number,' . $admin->id,
+                'password' => 'nullable|string|min:6|confirmed',
+                'national_code' => 'required|string|min:8|unique:admins,national_code,' . $admin->id,
+                'avatar' => 'required|string',
+                'birth_date' => 'required||date_format:Y-m-d',
+                'gender' => 'required|in:Male,FeMale'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()
+                ], 422);
+            }
+
+            $admin->update([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'user_name' => $request->user_name,
+                'mobile_number' => $request->mobile_number,
+                'national_code' => $request->national_code,
+                'avatar' => $request->avatar,
+                'birth_date' => $request->birth_date,
+                'gender' => $request->gender,
+                'password' => !empty($request->password) ? Hash::make($request->password) : $admin->password
+            ]);
 
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
                 'message' => 'عملیات با موفقیت انجام شد.',
-                'data' => $admin
             ], Response::HTTP_OK);
         }
 
@@ -670,55 +684,52 @@
          */
         public function update(Request $request, Admin $admin)
         {
-            $response1 = explode(' ', $request->header('Authorization'));
-            $token = trim($response1[1]);
-            $current_admin = JWTAuth::authenticate($token);
+            $current_admin = auth()->guard('admin')->user();
 
             $validator = Validator::make($request->all(), [
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
-                'roles' => 'required|string',
+                'user_name' => 'required|string|max:255|unique:admins,user_name,' . $admin->id,
+                'mobile_number' => 'required|string|max:11|unique:admins,mobile_number,' . $admin->id,
+                'password' => 'nullable|string|min:6|confirmed',
+                'national_code' => 'required|string|min:8|unique:admins,national_code,' . $admin->id,
                 'avatar' => 'required|string',
-                'birth_date' => 'required|string',
-                'gender' => 'required|string',
-                'province' => 'required|string',
-                'city' => 'required|string',
-                'address' => 'required|string',
-                'roles' => 'required|string',
+                'birth_date' => 'required||date_format:Y-m-d',
+                'gender' => 'required|in:Male,FeMale',
+                'role_id' => 'required|exists:admin_roles,id',
                 'status' => 'required|string',
             ]);
 
             if($validator->fails()){
                 return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
+                    'success' => false,
+                    'message' => $validator->errors()
+                ], 422);
             }
 
             $admin->update([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
-                'roles' => $request->roles,
+                'user_name' => $request->user_name,
+                'mobile_number' => $request->mobile_number,
+                'national_code' => $request->national_code,
+                'role_id' => $request->role_id,
                 'avatar' => $request->avatar,
                 'birth_date' => $request->birth_date,
                 'gender' => $request->gender,
-                'province' => $request->province,
-                'city' => $request->city,
-                'address' => $request->address,
-                'status' => $request->status
+                'status' => $request->status,
+                'password' => !Empty($request->password) ? Hash::make($request->password) : $admin->password
             ]);
 
-           EventLogs::addToLog([
-                'subject' => "ویرایش اطلاعات پرسنل",
-        	    'body' => $admin,
-        	    'user_id' => $current_admin->id,
-        	    'user_name'=> $current_admin->first_name." ".$current_admin->last_name,
+            EventLogs::addToLog([
+                'subject' => "ویرایش پرسنل: " . $admin->first_name . ' ' . $admin->last_name . " توسط " . $current_admin->first_name . ' ' . $current_admin->last_name,
+                'body' => $admin,
+                'user_id' => $current_admin->id,
+                'user_name' => $current_admin->first_name . " " . $current_admin->last_name,
             ]);
 
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
                 'message' => 'عملیات با موفقیت انجام شد.',
                 'data' => $admin
             ], Response::HTTP_OK);
@@ -730,11 +741,9 @@
          * @param  int  $id
          * @return \Illuminate\Http\Response
          */
-        public function destroy(Request $request,Admin $admin)
+        public function destroy(Admin $admin)
         {
-            $response1 = explode(' ', $request->header('Authorization'));
-            $token = trim($response1[1]);
-            $current_admin = JWTAuth::authenticate($token);
+            $current_admin = auth()->guard('admin')->user();
 
             if($admin->id==1){
                 return response()->json([
@@ -748,7 +757,7 @@
             $admin->delete();
 
             EventLogs::addToLog([
-                'subject' => "حذف پرسنل",
+                'subject' => " حذف پرسنل ". $admin->first_name.' '. $admin->last_name,
         	    'body' => $admin,
         	    'user_id' => $current_admin->id,
         	    'user_name'=> $current_admin->first_name." ".$current_admin->last_name,
@@ -756,9 +765,7 @@
 
             return response()->json([
                 'success' => true,
-                'statusCode' => 201,
-                'message' => 'عملیات با موفقیت انجام شد.',
-                'data' => $admin
+                'message' => 'عملیات با موفقیت انجام شد.'
             ], Response::HTTP_OK);
         }
     }

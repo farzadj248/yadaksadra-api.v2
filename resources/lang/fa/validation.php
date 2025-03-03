@@ -252,6 +252,9 @@ return [
         'preparationTime' => 'زمان ارسال',
         'Official_file' => 'فاکتور رسمی',
         'orderId' => 'شناسه سفارش',
-        'cartId' => 'شناسه محصول'
+        'cartId' => 'شناسه محصول',
+        'image_url' => 'تصویر',
+        'role_id' => 'نقش',
+        'permissions' => 'سطح دسترسی ها'
     ],
 ];

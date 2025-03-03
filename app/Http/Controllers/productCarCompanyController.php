@@ -3,14 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Helper\EventLogs;
-
+use App\Http\Resources\CommonResources;
 use App\Models\Admin;
-use App\Models\Product;
 use App\Models\ProductCarCompany;
-use App\Models\ProductCarModels;
 use App\Models\ProductDefinedCar;
 use App\Models\ProductCarTypes;
-use App\Helper\GenerateSlug;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\Request;
@@ -25,14 +22,12 @@ class productCarCompanyController extends Controller
     public function index(Request $request)
     {
         if($request->page){
-            $companies=ProductCarCompany::where('title', 'like', '%' . $request->q . '%')->paginate(10);
-
             if($request->q){
-                $companies=ProductCarCompany::whereRaw('concat(ProductCarCompany.title,ProductCarCompany.en_title) like ?', "%{$request->q}%")->paginate(10);
-
+                $data=ProductCarCompany::whereRaw('concat(ProductCarCompany.title,ProductCarCompany.en_title) like ?', "%{$request->q}%")->paginate(10);
             }else{
-                 $companies = ProductCarCompany::paginate(10);
+                $data = ProductCarCompany::paginate(10);
             }
+            return CommonResources::collection($data);
         }else{
             $companies=ProductCarCompany::all();
         }

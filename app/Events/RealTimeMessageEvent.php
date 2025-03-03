@@ -15,15 +15,17 @@ class RealTimeMessageEvent implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $message;
+    protected $channel;
 
-    public function __construct($message)
+    public function __construct($channel,$message)
     {
+        $this->channel = $channel;
         $this->message = $message;
     }
 
     public function broadcastOn()
     {
-        return new Channel('chat');
+        return new Channel($this->channel);
     }
 
     public function broadcastAs()

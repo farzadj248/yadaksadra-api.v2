@@ -24,8 +24,7 @@ class Admin extends Authenticatable implements JWTSubject
      */
     protected $fillable = [
         'personnel_code','first_name', 'last_name', 'user_name', 'email', 'password',
-        'mobile_number','roles','avatar','national_code','birth_date','gender', 'status',
-        'province', 'province', 'city', 'address'
+        'mobile_number','role_id','avatar','national_code','birth_date','gender', 'status'
     ];
 
     /**
@@ -36,6 +35,7 @@ class Admin extends Authenticatable implements JWTSubject
     protected $casts = [
         'created_at' => "datetime:Y-m-d H:i:s",
         'updated_at' => "datetime:Y-m-d H:i:s",
+        'status' => 'boolean'
     ];
 
     /**
@@ -54,5 +54,10 @@ class Admin extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    public function roles()
+    {
+        return $this->hasOne(AdminRoles::class,'id','role_d');
     }
 }

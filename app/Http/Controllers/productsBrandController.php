@@ -8,6 +8,7 @@ use App\Models\Admin;
 use App\Models\Product;
 use App\Models\ProductsBrands;
 use App\Helper\GenerateSlug;
+use App\Http\Resources\BrandResources;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\Request;
@@ -23,23 +24,21 @@ class productsBrandController extends Controller
     {
         if($request->page){
             $res=ProductsBrands::where("parent_id",$request->parent);
-
             if($request->q){
                 $res->whereRaw('concat(products_brands.title,products_brands.fa_title) like ?', "%{$request->q}%");
             }
-
-            $ProductsBrands = $res->paginate(10);
+            $data = $res->paginate(10);
+            return BrandResources::collection($data);
 
         }else{
-            $ProductsBrands=ProductsBrands::where("parent_id",$request->parent)->get();
+            $data=ProductsBrands::where("parent_id",$request->parent)->get();
+            return response()->json([
+                'success' => true,
+                'statusCode' => 201,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $data
+            ], Response::HTTP_OK);
         }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $ProductsBrands
-        ], Response::HTTP_OK);
     }
 
     /**

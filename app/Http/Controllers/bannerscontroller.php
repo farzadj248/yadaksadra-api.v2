@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CommonResources;
 use App\Models\Banners;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,229 +17,18 @@ class bannerscontroller extends Controller
      */
     public function index(Request $request)
     {
-        $horizontalBannerSlider = Banners::where('type',2)->orderBy("order","ASC")->get();
-        $horizontalBannerHeader = Banners::where('type',3)->where("status",1)->first();
-        $horizontalBanner = Banners::where('type',4)->orderBy("order","ASC")->get();
-        $horizontalVideo = Banners::where('type',5)->first();
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => [
-                "HorizontalBannerHeader"=> $horizontalBannerHeader,
-                "HorizontalBannerSlider"=> $horizontalBannerSlider,
-                "HorizontalBanner"=> $horizontalBanner,
-                "HorizontalVideo" => $horizontalVideo
-            ]
-        ], Response::HTTP_OK);
+        $data = Banners::where('title', 'like', '%' . $request->q . '%')
+            ->where('type','!=', 'slider_banner')
+            ->paginate(10);
+        return CommonResources::collection($data);
     }
 
     public function getSliders(Request $request)
     {
-        $banners=Banners::where('title', 'like', '%' . $request->q . '%')
-        ->where('type',1)
+        $data=Banners::where('title', 'like', '%' . $request->q . '%')
+        ->where('type', 'slider_banner')
         ->paginate(10);
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $banners
-        ], Response::HTTP_OK);
-    }
-
-    public function updateHorizontalBannerHeader(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'thumbnail' => 'required|string',
-            'image_link' => 'nullable|string',
-            'order' => 'required|numeric',
-            'status' => 'required|numeric',
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
-        }
-
-        if($request->id){
-            $banner = Banners::where("id",$request->id)->first()->update([
-                "title"=> $request->title,
-                "image_url"=> $request->image_url,
-                'thumbnail'=> $request->thumbnail,
-                'image_link'=> $request->image_link,
-                'order'=> $request->order,
-                'status'=> $request->status
-            ]);
-        }else{
-            $adv_banner = Banners::where("type",3)->first();
-            if($adv_banner){
-                $banner = $adv_banner->update([
-                    "title"=> $request->title,
-                    "image_url"=> $request->image_url,
-                    'thumbnail'=> $request->thumbnail,
-                    'image_link'=> $request->image_link,
-                    'order'=> $request->order,
-                    'status'=> $request->status
-                ]);
-            }else{
-               $banner = Banners::create([
-                    "title"=> $request->title,
-                    "image_url"=> $request->image_url,
-                    'thumbnail'=> $request->thumbnail,
-                    'image_link'=> $request->image_link,
-                    'order'=> $request->order,
-                    'status'=> $request->status,
-                    'type'=> 3
-                ]);
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $banner
-        ], Response::HTTP_OK);
-    }
-
-    public function updateHorizontalVideo(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'video_url' => 'required|string',
-            'status' => 'required|numeric',
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
-        }
-
-        if($request->id){
-            $banner = Banners::where("id",$request->id)->first()->update([
-                "title"=> $request->title,
-                "image_url"=> $request->image_url,
-                'video_url'=> $request->video_url,
-                'status'=> $request->status
-            ]);
-        }else{
-            $adv_banner = Banners::where("type",5)->first();
-            if($adv_banner){
-                $banner = $adv_banner->update([
-                    "title"=> $request->title,
-                    "image_url"=> $request->image_url,
-                    'video_url'=> $request->video_url,
-                    'status'=> $request->status
-                ]);
-            }else{
-               $banner = Banners::create([
-                    "title"=> $request->title,
-                    "image_url"=> $request->image_url,
-                    'video_url'=> $request->video_url,
-                    'status'=> $request->status,
-                    'type'=> 5
-                ]);
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $banner
-        ], Response::HTTP_OK);
-    }
-
-    public function updateHorizontalBannerSlider(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'image_link' => 'nullable|string',
-            'order' => 'required|numeric',
-            'status' => 'required|numeric',
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
-        }
-
-        if($request->id){
-            $banner = Banners::where("id",$request->id)->first()->update([
-                "title"=> $request->title,
-                "image_url"=> $request->image_url,
-                'image_link'=> $request->image_link,
-                'order'=> $request->order,
-                'status'=> $request->status
-            ]);
-        }else{
-            $banner = Banners::create([
-                "title"=> $request->title,
-                "image_url"=> $request->image_url,
-                'image_link'=> $request->image_link,
-                'order'=> $request->order,
-                'status'=> $request->status,
-                'type'=> 2
-            ]);
-        }
-
-        $horizontalBannerSlider = Banners::where('type',2)->orderBy("order","ASC")->get();
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $horizontalBannerSlider
-        ], Response::HTTP_OK);
-    }
-
-    public function updateHorizontalBanner(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|numeric',
-            'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'image_link' => 'nullable|string',
-            'order' => 'required|numeric',
-            'status' => 'required|numeric',
-            'type' => 'required|numeric',
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()
-            ], Response::HTTP_OK);
-        }
-
-        $banner = Banners::where("id",$request->id)->first()->update([
-            "title"=> $request->title,
-            "image_url"=> $request->image_url,
-            'image_link'=> $request->image_link,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $horizontalBanner
-        ], Response::HTTP_OK);
+        return CommonResources::collection($data);
     }
 
     /**
@@ -251,29 +41,28 @@ class bannerscontroller extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'thumbnail'=> 'nullable|string',
-            'start_date' => 'required|string|max:20',
-            'expire_date' => 'required|string|max:20',
-            'type' => 'required|numeric',
+            'image_url' => 'nullable|string|required_without:video_url',
+            'video_url' => 'nullable|string|required_without:image_url',
+            'start_date' => 'nullable|date_format:Y-m-d H:i:s',
+            'expire_date' => 'nullable|date_format:Y-m-d H:i:s|after:start_date',
+            'type' => 'required|in:slider_banner,bottom_banner_1,bottom_banner_2,bottom_banner_3,bottom_banner_4,bottom_banner_5,top_header_banner',
             'order' => 'required|numeric',
             'user_type' => 'required|numeric',
-            'status' => 'required',
+            'status' => 'required|boolean',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()->toJson()
-            ], Response::HTTP_OK);
+                'message' => $validator->errors()
+            ], 422);
         }
 
         $banner = Banners::create([
             'title' => $request->title,
-            'image_url' => $request->image_url,
-            'thumbnail' => $request->thumbnail,
+            'image_url' => $request->image_url ?? '',
             'image_link' => $request->image_link,
+            'video_url' => $request->video_url ?? '',
             'start_date' => $request->start_date,
             'expire_date' => $request->expire_date,
             'type' => $request->type,
@@ -317,32 +106,29 @@ class bannerscontroller extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'image_url' => 'required|string',
-            'thumbnail'=> 'nullable|string',
+            'image_url' => 'nullable|string|required_without:video_url',
+            'video_url' => 'nullable|string|required_without:image_url',
             'image_link' => 'required|string',
-            'start_date' => 'required|string|max:20',
-            'expire_date' => 'required|string|max:20',
-            'type' => 'required|numeric',
+            'start_date' => 'nullable|date_format:Y-m-d H:i:s',
+            'expire_date' => 'nullable|date_format:Y-m-d H:i:s|after:start_date',
             'user_type' => 'required|numeric',
-            'status' => 'required',
+            'status' => 'required|boolean',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
-                'message' => $validator->errors()->toJson()
-            ], Response::HTTP_OK);
+                'message' => $validator->errors()
+            ], 422);
         }
 
         $banner->update([
             'title' => $request->title,
-            'image_url' => $request->image_url,
-            'thumbnail' => $request->thumbnail,
+            'image_url' => $request->image_url ?? '',
+            'video_url' => $request->video_url ?? '',
             'image_link' => $request->image_link,
             'start_date' => $request->start_date,
             'expire_date' => $request->expire_date,
-            'type' => $request->type,
             'user_type' => $request->user_type,
             'order' => $request->order,
             'status' => $request->status

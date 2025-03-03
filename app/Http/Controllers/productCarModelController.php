@@ -11,6 +11,7 @@ use App\Models\ProductCarTypes;
 use App\Models\ProductCarModels;
 use App\Models\ProductDefinedCar;
 use App\Helper\GenerateSlug;
+use App\Http\Resources\CommonResources;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\Request;
@@ -30,13 +31,11 @@ class productCarModelController extends Controller
             }else{
                 $res=ProductCarModels::where("car_name",$request->model);
             }
-
-
             if($request->q){
                 $res->whereRaw('concat(product_car_models.title,product_car_models.en_title,product_car_models.model) like ?', "%{$request->q}%");
             }
-
-            $ProductCarModels = $res->paginate(10);
+            $data = $res->paginate(10);
+            return CommonResources::collection($data);
         }else{
             if($request->id){
                 $ProductCarModels=ProductCarModels::select("product_car_models.id","product_car_models.title", "product_car_models.en_title","product_car_models.car_id", "product_car_models.model",

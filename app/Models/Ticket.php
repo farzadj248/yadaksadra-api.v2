@@ -18,7 +18,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'reply_id','ticket_code', 'user_id', 'sender', 'receiver',
-        'subject', 'body', 'category_id', 'category_title',
+        'subject', 'body', 'category_id',
         'status', 'priority','attaches' ,'senderType','rating'
     ];
 
@@ -31,6 +31,11 @@ class Ticket extends Model
         'created_at' => "datetime:Y-m-d H:i:s",
         'updated_at' => "datetime:Y-m-d H:i:s",
         'sender' => 'array',
-        'receiver' => 'array'
+        'receiver' => 'array',
+        'attaches' => 'array'
     ];
+
+    public function category() {
+        return $this->hasOne(TicketCategories::class,'id', 'category_id');
+    }
 }

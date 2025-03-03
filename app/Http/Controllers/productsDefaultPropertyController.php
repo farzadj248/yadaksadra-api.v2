@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helper\EventLogs;
-
+use App\Http\Resources\CommonResources;
 use App\Models\Admin;
 use App\Models\ProductsProperties;
 use App\Models\ProductsDefaultProperty;
@@ -22,19 +22,18 @@ class productsDefaultPropertyController extends Controller
     public function index(Request $request)
     {
         if($request->page){
-            $properties=ProductsDefaultProperty::where('title', 'like', '%' . $request->q . '%')
+            $data=ProductsDefaultProperty::where('title', 'like', '%' . $request->q . '%')
             ->where("parent_id",$request->parent_id)->paginate(10);
-
+            return CommonResources::collection($data);
         }else{
-            $properties=ProductsDefaultProperty::where("parent_id",$request->parent_id)->get();
+            $data=ProductsDefaultProperty::where("parent_id",$request->parent_id)->get();
+            return response()->json([
+                'success' => true,
+                'statusCode' => 201,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $data
+            ], Response::HTTP_OK);
         }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $properties
-        ], Response::HTTP_OK);
     }
 
     public function getAll(Request $request)

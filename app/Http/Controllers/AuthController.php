@@ -28,6 +28,8 @@ use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 use App\Http\Requests\Auth\UserLoginRequest;
 use App\Http\Requests\Auth\UserRegisterRequest;
+use App\Http\Resources\UserResources;
+use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -877,19 +879,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        //valid credential
-        $validator = Validator::make($request->only('token'), [
-            'token' => 'required'
-        ]);
-
-        //Send failed response if request is not valid
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->messages()], 200);
-        }
-
-        //Request is validated, do logout
+        $token = $request->bearerToken();
         try {
-            JWTAuth::invalidate($request->token);
+           Auth::setToken($token)->invalidate();
             return response()->json([
                 'success' => true,
                 'message' => 'User has been logged out'
@@ -921,18 +913,16 @@ class AuthController extends Controller
             }
 
             $users = $users1->paginate(10);
+            return UserResources::collection($users);
         } else {
             $users = User::select('id', 'personnel_code', 'first_name', 'last_name', 'role', 'email')
                 ->whereRaw('concat(first_name,last_name,personnel_code) like ?', "%{$request->q}%")
                 ->get();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'عملیات با موفقیت انجام شد.',
+                ],200);
         }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $users
-        ], Response::HTTP_OK);
     }
 
     public function show(User $user)

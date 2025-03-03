@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CommonResources;
 use Carbon\Carbon;
 use App\Models\Orders;
 use App\Models\ShippingMethods;
@@ -18,14 +19,8 @@ class shippingMethodsController extends Controller
      */
     public function index(Request $request)
     {
-        $res = ShippingMethods::where('title', 'like', '%' . $request->q . '%')->paginate(10);
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $res,
-        ], Response::HTTP_OK);
+        $data = ShippingMethods::where('title', 'like', '%' . $request->q . '%')->paginate(10);
+        return CommonResources::collection($data);
     }
 
     /**

@@ -40,15 +40,18 @@ Route::post('transaction/verify', [CallbackController::class, 'transaction']);
 
 //Clear Cache facade value:
 Route::get('/clear-cache', function() {
-    Notification::create([
+   $notification = Notification::create([
+        'action' => 'event',
         'message' => [
-            'order_code' => 324354655,
+            'action' => 'order',
+            'id' => 558,
+            'userName' => "farzad jafari",
             'date' => Carbon::now()->format('Y-m-d H:i:s'),
-            'amount' => 450000,
             'message' => 'سفارش جدید دریافت شد.'
         ]
     ]);
-    event(new RealTimeMessageEvent('hello world'));
+    // event(new RealTimeMessageEvent('notification','hello world'));
+    event(new RealTimeMessageEvent('event', $notification));
     Artisan::call('cache:clear');
     Artisan::call('optimize');
     Artisan::call('route:cache');

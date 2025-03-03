@@ -15,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(RealTimeMessageEvent::class, function ($app) {
-            return new RealTimeMessageEvent("");
+            return new RealTimeMessageEvent('event','');
         });
     }
 

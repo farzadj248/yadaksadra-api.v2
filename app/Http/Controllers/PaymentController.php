@@ -430,12 +430,11 @@ class PaymentController extends Controller
                     }
                 }
 
-                $this->sendNotification([
-                    'action'=> 'order',
-                    'order_code' => $current_order->order_code,
+                $this->sendNotification('event',[
+                    'action' => 'order',
+                    'id' => $current_order->id,
                     'date' => Carbon::now()->format('Y-m-d H:i:s'),
-                    'amount' => number_format($current_order->total).' تومان',
-                    'message' => 'سفارش جدید.'
+                    'message' => 'سفارش جدید دریافت شد.'
                 ]);
 
                 return response()->json([
@@ -543,12 +542,11 @@ class PaymentController extends Controller
                         }
                     }
 
-                    $this->sendNotification([
-                        'action'=> 'order',
-                        'order_code' => $current_order->order_code,
+                    $this->sendNotification('event',[
+                        'action' => 'order',
+                        'id' => $current_order->id,
                         'date' => Carbon::now()->format('Y-m-d H:i:s'),
-                        'amount' => number_format($current_order->total) . ' تومان',
-                        'message' => 'سفارش جدید.'
+                        'message' => 'سفارش جدید دریافت شد.'
                     ]);
 
                     return response()->json([
@@ -918,8 +916,8 @@ class PaymentController extends Controller
 
     public function sendNotification($message)
     {
-        Notification::create(['message' => $message]);
-        event(new RealTimeMessageEvent($message));
+        $notification = Notification::create(['message' => $message]);
+        event(new RealTimeMessageEvent('event', $notification));
     }
 
 }

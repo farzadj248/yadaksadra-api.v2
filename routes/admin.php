@@ -86,22 +86,26 @@ Route::group(['namespace' => 'admin', 'prefix' => 'admin'], function () {
 
 Route::middleware(['auth:admin','admin'])->group(function () {
     Route::resource('medias', MediaController::class);
+
+    Route::get('admin', [adminController::class, 'index']);
+    Route::get('admin/{admin}', [adminController::class, 'show']);
+    Route::put('admin/{admin}', [adminController::class, 'update']);
+    Route::post('admin', [adminController::class, 'store']);
+    Route::delete('admin/{admin}', [adminController::class, 'destroy']);
+    Route::get('myProfile', [adminController::class, 'profile']);
+    Route::post('updateProfile', [adminController::class, 'updateProfile']);
+
+    Route::post('logout', [AuthController::class, 'logout']);
     
     Route::post('product/DefinedCar', [productController::class, 'definedCar']);
     Route::post('product/define_cars', [productController::class, 'product_define_cars']);
 
     Route::resource('productCountryBuilders', ProductCountryBuildersController::class);
-
     Route::resource('productsCateory', productsCategoryController::class);
-
     Route::resource('productsBrand', productsBrandController::class);
-
     Route::resource('productCarType', productCarTypeController::class);
-
     Route::resource('productCarCompany', productCarCompanyController::class);
-
     Route::resource('productCarYear', productCarYearController::class);
-
     Route::resource('productCarModel', productCarModelController::class);
 
     Route::get('product', [productController::class,'index']);
@@ -131,37 +135,27 @@ Route::middleware(['auth:admin','admin'])->group(function () {
 
     Route::post('orders/{orderCode}/verify', [ordersController::class, 'verifyOrder']);
 
-    Route::resource('team', teamController::class); 
+    Route::resource('team', teamController::class);
 
-    Route::resource('banner', bannerscontroller::class);
+    Route::get('banner', [bannerscontroller::class, 'index']);
+    Route::post('banner', [bannerscontroller::class,'store']);
+    Route::put('banner/{banner}', [bannerscontroller:: class, 'update']);
+    Route::get('banner/{banner}', [bannerscontroller:: class, 'show']);
+    Route::delete('banner/{banner}', [bannerscontroller:: class, 'destroy']);
+    Route::get('banners/getSliders', [bannerscontroller::class, 'getSliders']);
 
     Route::resource('ticketCategory', ticketCategoryController::class);
 
-    Route::resource('socialNetwork', socialNetworkController::class, [
-        'only' => ['store', 'update', 'destroy']
-    ]);
+    Route::resource('socialNetwork', socialNetworkController::class);
 
     Route::resource('adminAccessLevel', adminAccessLevelController::class);
     Route::resource('adminRoles', adminRolesController::class);
 
     Route::resource('discounts', DiscountsController::class);
-
-    Route::resource('article', articleController::class, [
-        'only' => ['store', 'update', 'destroy']
-    ]);
-
-    Route::resource('news', newsController::class, [
-        'only' => ['store', 'update', 'destroy']
-    ]);
-
-    Route::resource('video', videoController::class, [
-        'only' => ['store', 'update', 'destroy']
-    ]);
-
-    Route::resource('shippingMethod', shippingMethodsController::class, [
-        'only' => ['store', 'update', 'destroy']
-    ]);
-
+    Route::resource('article', articleController::class);
+    Route::resource('news', newsController::class);
+    Route::resource('video', videoController::class);
+    Route::resource('shippingMethod', shippingMethodsController::class);
 
     Route::post('reports', [ReportsController::class, 'getReportData']);
 
@@ -196,16 +190,16 @@ Route::middleware(['auth:admin','admin'])->group(function () {
     Route::get('user/getAll', [AuthController::class, 'index']);
     Route::get('credits/get', [AuthController::class, 'getUserCredits']);
 
-    Route::get('admin', [adminController::class, 'index']);
-    Route::get('admin/{admin}', [adminController::class, 'show']);
-    Route::put('admin/{admin}', [adminController::class, 'update']);
-    Route::post('admin', [adminController::class, 'store']);
-    Route::delete('admin/{admin}', [adminController::class, 'destroy']);
-
-    Route::post('admin/logout', [AuthController::class, 'logout']);
-
     Route::get('fastPayments', [fastPaymentController::class,'index']);
 
+    // notifications
     Route::get('notifications',[NotificationController::class,'index']);
     Route::post('notification/{id}/seen', [NotificationController::class, 'seenMessage']);
+
+    // tickets
+    Route::get('ticket', [ticketController::class, 'index']);
+    Route::post('ticket', [ticketController::class, 'store']);
+
+    // dashboard
+    Route::get('history', [HomeController::class, 'shopHistory']);
 });

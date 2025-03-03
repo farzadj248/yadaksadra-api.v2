@@ -73,7 +73,7 @@ class ordersController extends Controller
     }
 
     public function show($orderId)
-    {        
+    {
         $order = Orders::with(['items.product.image'])
         ->findOrFail($orderId);
 

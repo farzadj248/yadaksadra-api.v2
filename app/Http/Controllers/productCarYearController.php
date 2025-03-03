@@ -9,6 +9,7 @@ use App\Models\Admin;
 use App\Models\ProductCarTypes;
 use App\Models\ProductCarYears;
 use App\Helper\GenerateSlug;
+use App\Http\Resources\CommonResources;
 use App\Models\ProductDefinedCar;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,8 +25,9 @@ class productCarYearController extends Controller
     public function index(Request $request)
     {
         if($request->page){
-            $ProductCarYears=ProductCarYears::where("model_id",$request->id)
+            $data=ProductCarYears::where("model_id",$request->id)
                 ->where('title', 'like', '%' . $request->q . '%')->paginate(10);
+            return CommonResources::collection($data);
         }else{
             $ProductCarYears=ProductCarYears::where("model_id",$request->id)->get();
         }
@@ -116,7 +118,7 @@ class productCarYearController extends Controller
             'model_name' => $request->model_name
         ]);
 
-        ProductDefinedCar::where("year_id",$productCarType->id)->update([
+        ProductDefinedCar::where("year_id",$productCarYear->id)->update([
             "year_name"=> $request->title
         ]);
 

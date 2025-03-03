@@ -20,7 +20,8 @@ class AddTypeToBannersTable extends Migration
                 'bottom_banner_2', 
                 'bottom_banner_3', 
                 'bottom_banner_4', 
-                'bottom_banner_5'
+                'bottom_banner_5',
+                'top_header_banner'
             ])->after('expire_date');
         });
     }

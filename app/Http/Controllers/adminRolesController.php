@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helper\EventLogs;
+use App\Http\Resources\CommonResources;
 use App\Models\Admin;
 use App\Models\AdminRoles;
 use Illuminate\Support\Facades\Validator;
@@ -20,12 +22,7 @@ class adminRolesController extends Controller
         $adminRoles=AdminRoles::select("id","en_title","fa_title","access_leveles")
         ->whereRaw('concat(en_title,fa_title) like ?', "%{$request->q}%")
         ->paginate(10);
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $adminRoles
-        ], Response::HTTP_OK);
+        return CommonResources::collection($adminRoles);
     }
 
     /**
@@ -38,42 +35,34 @@ class adminRolesController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'en_title' => 'required|string|max:255|unique:admin_roles',
-            'fa_title' => 'required|string|max:255',
-            'access_leveles' => 'required|string',
+            'fa_title' => 'required|string|max:255|unique:admin_roles',
+            'permissions.*' => 'required|string',
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
         $adminRole = AdminRoles::create([
             'en_title' => $request->en_title,
             'fa_title' => $request->fa_title,
-            'access_leveles' => $request->access_leveles
+            'access_leveles' => $request->permissions
         ]);
 
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
-
-            if($admin){
-                EventLogs::addToLog([
-                    'subject' =>"ایجاد نقش جدید",
-            	    'body' => $adminRole,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
-                ]);
-            }
-        }
+        $admin=auth()->guard('admin')->user();
+        EventLogs::addToLog([
+            'subject' =>"ایجاد نقش جدید:". $request->fa_title.' توسط '. $admin->first_name.' '. $admin->last_name,
+            'body' => $adminRole,
+            'user_id' => $admin->id,
+            'user_name'=> $admin->first_name." ".$admin->last_name,
+        ]);
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $adminRoles
         ], Response::HTTP_OK);
     }
 
@@ -106,7 +95,7 @@ class adminRolesController extends Controller
         $validator = Validator::make($request->all(), [
             'en_title' => 'required|string|max:255',
             'fa_title' => 'required|string|max:255',
-            'access_leveles' => 'required|string',
+            'permissions.*' => 'required|string',
         ]);
 
         if($validator->fails()){
@@ -125,30 +114,23 @@ class adminRolesController extends Controller
             ], Response::HTTP_OK);
         }
 
+        $admin = auth()->guard('admin')->user();
+        EventLogs::addToLog([
+            'subject' => "ویرایش نقش: " . $adminRole->fa_title . ' توسط ' . $admin->first_name . ' ' . $admin->last_name.' به '.$request->fa_title,
+            'body' => $adminRole,
+            'user_id' => $admin->id,
+            'user_name' => $admin->first_name . " " . $admin->last_name,
+        ]);
+
         $adminRole->update([
             'en_title' => $request->en_title,
             'fa_title' => $request->fa_title,
-            'access_leveles' => $request->access_leveles
+            'access_leveles' => $request->permissions
         ]);
-
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
-
-            if($admin){
-                EventLogs::addToLog([
-                    'subject' =>"ویرایش نقش",
-            	    'body' => $adminRole,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
-                ]);
-            }
-        }
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $adminRole
         ], Response::HTTP_OK);
     }
 
@@ -160,36 +142,26 @@ class adminRolesController extends Controller
      */
     public function destroy(Request $request,AdminRoles $adminRole)
     {
-        if(Admin::where('admins.roles', 'LIKE', '%' .$adminRole->en_title. '%')->exists()){
+        if(Admin::where('role_id',$adminRole->id)->exists()){
             return response()->json([
                 'success' => false,
-                'statusCode' => 201,
-                'message' => [
-                    'title'=> 'به دلیل وابستگی با سایر بخش ها امکان حذف وجود ندارد.'
-                ]
-            ], Response::HTTP_OK);
+                'message' => 'به دلیل وابستگی با سایر بخش ها امکان حذف وجود ندارد.'
+            ], 403);
         }
 
         $adminRole->delete();
 
-        if($request->header('agent')){
-            $admin=Admin::where("id",$request->header('agent'))->first();
-
-            if($admin){
-                EventLogs::addToLog([
-                    'subject' =>"حذف نقش",
-            	    'body' => $adminRole,
-            	    'user_id' => $admin->id,
-            	    'user_name'=> $admin->first_name." ".$admin->last_name,
-                ]);
-            }
-        }
+        $admin=auth()->guard('admin')->user();
+        EventLogs::addToLog([
+            'subject' => "حذف نقش ". $adminRole->fa_title.' توسط '. $admin->first_name.' '. $admin->last_name,
+            'body' => $adminRole,
+            'user_id' => $admin->id,
+            'user_name' => $admin->first_name . " " . $admin->last_name,
+        ]);
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $adminRole
         ], Response::HTTP_OK);
     }
 }

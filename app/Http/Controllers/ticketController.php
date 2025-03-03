@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\RealTimeMessageEvent;
+use App\Http\Resources\CommonResources;
+use App\Models\Admin;
 use App\Models\Media;
+use App\Models\Notification;
 use Carbon\Carbon;
 use App\Models\Ticket;
 use App\Models\TicketCategories;
+use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 
 class ticketController extends Controller
@@ -22,39 +25,100 @@ class ticketController extends Controller
      */
     public function index(Request $request)
     {
-        $tickets=Ticket::leftJoin('users', function ($query) {
+        $data=Ticket::leftJoin('users', function ($query) {
             $query->on('users.id', '=', 'tickets.user_id');
         })
             ->select('tickets.*','users.first_name','users.last_name')
             ->where('tickets.subject', 'like', '%' . $request->q . '%')
             ->where("tickets.reply_id",0)
+            ->with('category')
             ->paginate(10);
+
+        return CommonResources::collection($data); 
+    }
+
+    public function getUserTicket(Request $request)
+    {
+        $user = auth()->user();
+
+        $tickets=Ticket::where('user_id',$user->id)
+            ->where("tickets.reply_id",0)
+        ->where("status",$request->status)->paginate(10);
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
             'data' => $tickets
         ], Response::HTTP_OK);
     }
 
-    public function getUserTicket(Request $request)
+    public function userSendTicket(Request $request)
     {
-        $response1 = explode(' ', $request->header('Authorization'));
-        $token = trim($response1[1]);
-        $user = JWTAuth::authenticate($token);
+        $validator = Validator::make($request->all(), [
+            'reply_id' => 'required|numeric',
+            'subject' => 'required|string',
+            'body' => 'required|string',
+            'category_id' => 'required|exists:ticket_categories,id',
+            'status' => 'required|numeric',
+            'priority' => 'required|numeric',
+            'attaches.*' => 'nullable|string'
+        ]);
 
-        $tickets=Ticket::where('user_id',$user->id)
-            ->where("tickets.reply_id",0);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()
+            ], 422);
+        }
 
-        $res = $tickets->where("status",$request->status)->paginate(10);
+        $user =  auth()->user();
+        $admin = Admin::find(1);
+        $category = TicketCategories::find($request->category_id);
 
+        $last_ticket = Ticket::latest()->first();
+        if ($last_ticket) {
+            $ticket_code = (int)$last_ticket->ticket_code + 1;
+        } else {
+            $ticket_code =  1000;
+        }
+
+        $ticket = Ticket::create([
+            'ticket_code' => $ticket_code,
+            'reply_id' => $request->reply_id ?? '',
+            'user_id' => $user->id,
+            'sender' => ["id"=> $user->id,"fullName"=> $user->first_name.' '.$user->last_name,"email"=> $user->email],
+            'receiver' => ["id" => $admin->id, "fullName" => $admin->first_name . ' ' . $admin->last_name, "email" => $admin->email],
+            'subject' => $request->subject,
+            'body' => $request->body,
+            'category_id' => $category->id,
+            'status' => $request->status,
+            'priority' => $request->priority,
+            'senderType'=> 2,
+            'attaches' => $request->attaches
+        ]);
+
+        if ($request->reply_id != 0) {
+            Ticket::where("id", $request->reply_id)
+            ->update(["status" => $request->status]);
+        }
+
+        $notification = Notification::create([
+            'action' => 'message',
+            'message' => [
+                'action' => 'ticket',
+                'id' => $ticket_code,
+                'userName' => $user->first_name . ' ' . $user->last_name,
+                'date' => Carbon::now()->format('Y-m-d H:i:s'),
+                'message' => 'تیکت جدید دریافت شد.'
+            ]
+        ]);
+        event(new RealTimeMessageEvent('messages', $notification));
+        event(new RealTimeMessageEvent('tickets', $notification));
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $res
+            'data' => $ticket
         ], Response::HTTP_OK);
     }
 
@@ -68,73 +132,55 @@ class ticketController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'reply_id' => 'required|numeric',
-            'user_id' => 'required|numeric',
-            'sender' => 'required|string',
-            'receiver' => 'required|string',
+            'user_id' => 'required|exists:users,id',
             'subject' => 'required|string',
             'body' => 'required|string',
-            'category_id' => 'required|numeric',
-            'category_title' => 'required|string',
+            'category_id' => 'required|exists:ticket_categories,id',
             'status' => 'required|numeric',
             'priority' => 'required|numeric',
-            'senderType' => 'numeric',
+            'attaches.*' => 'nullable|string'
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'statusCode' => 422,
                 'message' => $validator->errors()
-            ], Response::HTTP_OK);
+            ], 422);
         }
 
-        if(!TicketCategories::where("id",$request->category_id)->exists()){
-            return response()->json([
-                'success' => false,
-                'statusCode' => 201,
-                'message' => [
-                    'title'=> 'بخش یافت نشد.'
-                ]
-            ], Response::HTTP_OK);
-        }
-
-        $attaches=array();
-
-        foreach($request->allFiles() as $image){
-            $attaches[] = $this->upload_files($image);
-        }
+        $user = User::find($request->user_id);
+        $admin =  auth()->guard('admin')->user();
+        $category = TicketCategories::find($request->category_id);
 
         $last_ticket = Ticket::latest()->first();
-        if($last_ticket){
+        if ($last_ticket) {
             $ticket_code = (int)$last_ticket->ticket_code + 1;
-        }else{
-           $ticket_code =  1000;
+        } else {
+            $ticket_code =  1000;
         }
 
         $ticket = Ticket::create([
             'ticket_code' => $ticket_code,
-            'reply_id' => $request->reply_id,
-            'user_id' => $request->user_id,
-            'sender' => $request->sender,
-            'receiver' => $request->receiver,
+            'reply_id' => $request->reply_id ?? '',
+            'user_id' => $user->id,
+            'sender' => ["id" => $user->id, "fullName" => $user->first_name . ' ' . $user->last_name, "email" => $user->email],
+            'receiver' => ["id" => $admin->id, "fullName" => $admin->first_name . ' ' . $admin->last_name, "email" => $admin->email],
             'subject' => $request->subject,
             'body' => $request->body,
-            'category_id' => $request->category_id,
-            'category_title' => $request->category_title,
+            'category_id' => $category->id,
             'status' => $request->status,
             'priority' => $request->priority,
-            'attaches' => json_encode($attaches),
-            'senderType' => $request->senderType
+            'senderType' =>1,
+            'attaches' => $request->attaches
         ]);
 
-        if($request->reply_id!=0){
-            $mainTicket=Ticket::where("id",$request->reply_id)->first();
-            $mainTicket->update(["status"=>$request->status]);
+        if ($request->reply_id != 0) {
+            Ticket::where("id", $request->reply_id)
+                ->update(["status" => $request->status]);
         }
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
             'data' => $ticket
         ], Response::HTTP_OK);

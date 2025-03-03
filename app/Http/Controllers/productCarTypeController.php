@@ -12,6 +12,7 @@ use App\Models\ProductDefinedCar;
 use App\Models\ProductCarTypes;
 use App\Models\ProductCarYear;
 use App\Helper\GenerateSlug;
+use App\Http\Resources\CommonResources;
 use App\Models\ProductCarYears;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,7 +35,8 @@ class productCarTypeController extends Controller
             if ($request->q) {
                 $res->whereRaw('concat(product_car_types.title,product_car_types.en_title,product_car_types.company_name) like ?', "%{$request->q}%");
             }
-            $productCarTypes = $res->paginate(10);
+            $data = $res->paginate(10);
+            return CommonResources::collection($data);
         } else {
             $productCarTypes = ProductCarTypes::where('company_id', $request->id)->get();
         }

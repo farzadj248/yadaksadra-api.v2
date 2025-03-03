@@ -2,12 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DepositRequests;
-use App\Models\Contactus;
 use App\Models\Article;
-use App\Models\Discounts;
 use App\Models\ProductCarCompany;
-use App\Models\ProductCarTypes;
 use App\Models\ProductsBrands;
 use App\Models\ShopInfo;
 use App\Models\Favorites;
@@ -15,18 +11,14 @@ use App\Models\Cart;
 use App\Models\User;
 use App\Models\Banners;
 use App\Models\Orders;
-use App\Models\Messages;
 use App\Models\Transactions;
 use App\Models\Product;
-use App\Models\ProductsImages;
 use App\Models\SocialNetwork;
 use App\Models\Ticket;
 use \Carbon\Carbon;
-use App\Models\TicketCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -110,30 +102,21 @@ class HomeController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function unread_received_data()
+    public function shopHistory()
     {
-        $ticket = Ticket::where("status", 2)->get()->count();
-        $orders = Orders::where("status", 2)->get()->count();
-        $users = User::where("status", 1)->get()->count();
-        $messages = Messages::where("type", 1)->where("seen", 1)->get()->count();
-        $discounts = Discounts::where("creator", 2)->where("status", 1)->get()->count();
-        $contactus = Contactus::where("seen", 1)->get()->count();
-        $depositRequests = DepositRequests::where("status", 1)->get()->count();
-        $creditRequest = User::where('documents_status', 1)->get()->count();
+        $tickets = Ticket::count();
+        $orders = Orders::count();
+        $users = User::count();
+        $products = Product::count();
 
         return response()->json([
             'success' => true,
-            'statusCode' => 201,
             'message' => 'عملیات با موفقیت انجام شد.',
             'data' => [
-                "tickets" => $ticket,
+                "tickets" => $tickets,
                 "orders" => $orders,
                 "users" => $users,
-                "messages" => $messages,
-                "discounts" => $discounts,
-                "contactus" => $contactus,
-                "depositRequests" => $depositRequests,
-                "creditRequest" => $creditRequest
+                "products" => $products
             ]
         ], Response::HTTP_OK);
     }

@@ -25,12 +25,9 @@ class CreateAdminsTable extends Migration
             $table->char('national_code',10)->nullable()->unique();
             $table->string('birth_date')->nullable();
             $table->string('email')->nullable()->unique();
-            $table->char('gender',1)->nullable();
-            $table->char('status',1)->default(0);
-            $table->string('roles')->nullable();
-            $table->text('address');
-            $table->string('province');
-            $table->string('city');
+            $table->enum('gender',['Male', 'FeMale'])->nullable();
+            $table->boolean('status')->default(false);
+            $table->integer('role_id');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

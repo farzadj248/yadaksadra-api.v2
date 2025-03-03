@@ -1,19 +1,12 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\adminController;
 use App\Http\Controllers\socialNetworkController;
-use App\Http\Controllers\ticketCategoryController;
 use App\Http\Controllers\ticketController;
 use App\Http\Controllers\articleController;
-use App\Http\Controllers\articleCateoryController;
 use App\Http\Controllers\articleCommentController;
 use App\Http\Controllers\newsController;
 use App\Http\Controllers\newsCateoryController;
-use App\Http\Controllers\newsCommentController;
-use App\Http\Controllers\videoController;
-use App\Http\Controllers\videoCommentController;
-use App\Http\Controllers\videoCateoryController;
 use App\Http\Controllers\productController;
 use App\Http\Controllers\productCommentController;
 use App\Http\Controllers\productsCategoryController;
@@ -24,22 +17,17 @@ use App\Http\Controllers\productCarModelController;
 use App\Http\Controllers\ProductCountryBuildersController;
 use App\Http\Controllers\productsBrandController;
 use App\Http\Controllers\ordersController;
-use App\Http\Controllers\orderItemController;
 use App\Http\Controllers\cartController;
 use App\Http\Controllers\faqsController;
 use App\Http\Controllers\faqsCategoryController;
 use App\Http\Controllers\shopInfoController;
 use App\Http\Controllers\messageController;
 use App\Http\Controllers\favoriteController;
-use App\Http\Controllers\adminAccessLevelController;
-use App\Http\Controllers\adminRolesController;
 use App\Http\Controllers\DiscountsController;
-use App\Http\Controllers\bannerscontroller;
 use App\Http\Controllers\usersMediaController;
 use App\Http\Controllers\transactionController;
 use App\Http\Controllers\depositRequestsController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\fastPaymentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\usersAddressController;
@@ -55,8 +43,6 @@ use App\Http\Controllers\shippingMethodsController;
 use App\Http\Controllers\productsDefaultPropertyController;
 use App\Http\Controllers\ViewersStatisticsController;
 use App\Http\Controllers\teamController;
-
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -146,7 +132,9 @@ Route::group(['middleware' => ['jwt.verify']], function () {
     Route::post('user/messages', [messageController::class, 'getUserMessages']);
     Route::post('user/article/comments', [articleCommentController::class, 'getUserComments']);
     Route::post('user/product/comments', [productCommentController::class, 'getUserComments']);
-    Route::post('user/ticket', [ticketController::class, 'getUserTicket']);
+    Route::get('user/ticket', [ticketController::class, 'getUserTicket']);
+    Route::post('sendTicket', [ticketController::class,'userSendTicket']);
+
     Route::post('user/credit_requests/get', [CreditRequestsController::class, 'getUserCreditRequests']);
 
     Route::post('user/coupons', [DiscountsController::class, 'getUserDiscounts']);
@@ -168,11 +156,6 @@ Route::group(['middleware' => ['jwt.verify']], function () {
     Route::get('events/logs/getAll', [eventsController::class, 'getAll']);
     Route::delete('events/logs/delete', [eventsController::class, 'remove']);
 
-    Route::put('banners/horizontalBannerHeader/update', [bannerscontroller::class, 'updateHorizontalBannerHeader']);
-    Route::put('banners/horizontalBannerSlider/update', [bannerscontroller::class, 'updateHorizontalBannerSlider']);
-    Route::put('banners/horizontalBanner/update', [bannerscontroller::class, 'updateHorizontalBanner']);
-    Route::put('banners/horizontalVideo/update', [bannerscontroller::class, 'updateHorizontalVideo']);
-
     Route::put('shopInfos/termsAndConditions', [shopInfoController::class, 'termsAndConditions']);
     Route::put('shopInfos/aboutus', [shopInfoController::class, 'about']);
 
@@ -181,14 +164,11 @@ Route::group(['middleware' => ['jwt.verify']], function () {
     Route::post('mail', [MailsController::class, 'send']);
     Route::post('mail_bulk', [MailsController::class, 'send_bulk']);
 
-    Route::resource('ticket', ticketController::class);
-
     Route::post('Viewers/statistics', [ViewersStatisticsController::class, 'getAll']);
 });
 
 
 Route::get('sale_statistics', [HomeController::class, 'saleStatistics']);
-Route::get('admin/unread_received_data', [HomeController::class, 'unread_received_data']);
 
 Route::post('fastPayments', [fastPaymentController::class,'store']);
 
@@ -199,11 +179,6 @@ Route::resource('megamenu', megamenuController::class);
 Route::put('mega_menu/update', [megamenuController::class, 'updateMegaMenu']);
 
 Route::get('products/properties', [productsDefaultPropertyController::class, 'getAll']);
-
-
-
-Route::get('banner', [bannerscontroller::class,'index']);
-Route::get('banners/getSliders', [bannerscontroller::class, 'getSliders']);
 
 //news
 Route::get('news', [newsController::class, 'index']);

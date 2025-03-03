@@ -139,5 +139,4 @@ class fastPaymentController extends Controller
             'data' => null
         ], Response::HTTP_OK);
     }
-
 }

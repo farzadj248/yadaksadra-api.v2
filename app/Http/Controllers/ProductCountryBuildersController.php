@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Helper\EventLogs;
-
+use App\Http\Resources\CommonResources;
 use App\Models\Admin;
 use App\Models\Product;
 use App\Models\ProductCountryBuilders;
-use App\Helper\GenerateSlug;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\Request;
@@ -22,17 +21,16 @@ class ProductCountryBuildersController extends Controller
     public function index(Request $request)
     {
         if($request->page){
-            $ProductCountryBuilders=ProductCountryBuilders::where('title', 'like', '%' . $request->q . '%')->paginate(10);
+            $data=ProductCountryBuilders::where('title', 'like', '%' . $request->q . '%')->paginate(10);
+            return CommonResources::collection($data);
         }else{
-            $ProductCountryBuilders=ProductCountryBuilders::all();
+            $data=ProductCountryBuilders::all();
+            return response()->json([
+                'statusCode' => 201,
+                'message' => 'عملیات با موفقیت انجام شد.',
+                'data' => $data
+            ], Response::HTTP_OK);
         }
-
-        return response()->json([
-            'success' => true,
-            'statusCode' => 201,
-            'message' => 'عملیات با موفقیت انجام شد.',
-            'data' => $ProductCountryBuilders
-        ], Response::HTTP_OK);
     }
 
     /**
